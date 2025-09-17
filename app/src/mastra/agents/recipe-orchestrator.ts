@@ -1,0 +1,77 @@
+import { Agent } from "@mastra/core/agent";
+import { Memory } from "@mastra/memory";
+import { LibSQLStore } from "@mastra/libsql";
+import { openai } from "@ai-sdk/openai";
+import { getCurrentDate } from "../tools/get-current-date";
+import { runGenerateFullRecipesWorkflow } from "../tools/run-generate-full-recipes-workflow";
+import { getUserRecipes } from "../tools/get-user-recipes";
+import { AgentId } from "./ids";
+
+const workingMemoryTemplate = `
+## Meal Preferences
+
+- Total Prep & CookTime Preferences: [e.g., < 30 minutes, > 30 minutes]
+- Ingredients Preferences: [e.g., Vegetarian, Vegan, Gluten-free]
+- Difficulty Preferences: [e.g., Easy, Medium, Hard]
+- Style Preferences: [e.g., Comfort Food, Healthy, International]
+
+## Current Meal Planning
+
+### Planning Topic: [e.g., Recipe Brainstorming, Meal Planning]
+
+### Ingredients on hand
+  - Ingredient 1
+  - Ingredient 2
+  - Ingredient 3
+
+### Recipes already made and stored
+  - Recipe 1
+  - Recipe 2
+  - Recipe 3
+
+### Ingredients to buy
+  - Ingredient 1
+  - Ingredient 2
+  - Ingredient 3
+
+### Meals to make
+  - Recipe 1
+  - Recipe 2
+  - Recipe 3
+`
+
+export const recipeOrchestrator = new Agent({
+  id: AgentId.RecipeOrchestrator,
+  name: AgentId.RecipeOrchestrator,
+  instructions:
+    `You are a friendly culinary assistant. Brainstorm recipe ideas and chat about cooking.
+    
+    You have access to the user's personal recipe collection and can:
+    - Search through their saved and favorite recipes
+    - Help them find recipes they've previously saved
+    - Generate new detailed recipes when requested
+    
+    When the user asks about their existing recipes, use the 'getUserRecipes' tool to search their collection. 
+    The user ID is automatically provided - you don't need to specify it.
+    When the user asks for full/detailed instructions for new recipe ideas, call the 'runGenerateFullRecipesWorkflow' tool with an array of titles.
+    
+    Always be helpful and provide cooking tips, substitutions, and meal planning advice.`,
+  model: openai("gpt-4o-mini"),
+  tools: {
+    getCurrentDate,
+    runGenerateFullRecipesWorkflow,
+    getUserRecipes,
+  },
+  memory: new Memory({
+    storage: new LibSQLStore({
+      url: "file:../memory.db", // local file-system database. Location is relative to the output directory `.mastra/output`
+    }),
+    options: {
+      lastMessages: 12, // default is 10
+      workingMemory: {
+        enabled: true,
+        template: workingMemoryTemplate,
+      },
+    },
+  }),
+});
