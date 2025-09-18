@@ -178,10 +178,10 @@ query getUserRecipes {
   entities: [ElaboratedRecipe]
 }
 
-job cleanupUnsavedRecipesJob {
+job cleanupUnfavoritedRecipes {
   executor: PgBoss,
   perform: {
-    fn: import { cleanupUnsavedRecipes } from "@src/recipes/recipe-operations"
+    fn: import { cleanupUnfavoritedRecipes } from "@src/recipes/recipe-operations"
   },
   schedule: {
     cron: "0 2 * * 0" // Every Sunday at 2 AM

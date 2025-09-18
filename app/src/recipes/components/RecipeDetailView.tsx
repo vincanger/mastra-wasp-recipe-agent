@@ -4,70 +4,34 @@ import { Separator } from "../../components/ui/separator";
 import { Button } from "../../components/ui/button";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import type { ElaboratedRecipe } from "wasp/entities";
-import { saveRecipe, toggleFavoriteRecipe } from "wasp/client/operations";
-import { Clock, Users, ChefHat, Calendar, Heart, Save, Loader2 } from "lucide-react";
+import { toggleFavoriteRecipe } from "wasp/client/operations";
+import { Clock, Users, ChefHat, Calendar, Heart, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 interface RecipeDetailViewProps {
   recipe: ElaboratedRecipe;
-  savedRecipe?: ElaboratedRecipe; // If this recipe is saved in DB
   onViewFullRecipe?: () => void;
   onViewCalendar?: () => void;
-  onRecipeSaved?: (savedRecipe: ElaboratedRecipe) => void;
   onRecipeUpdated?: (updatedRecipe: ElaboratedRecipe) => void;
 }
 
 export function RecipeDetailView({ 
   recipe,
-  savedRecipe,
   onViewFullRecipe, 
   onViewCalendar,
-  onRecipeSaved,
   onRecipeUpdated
 }: RecipeDetailViewProps) {
-  const [isSaving, setIsSaving] = useState(false);
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
 
   // Cast JSON fields to arrays since they're stored as JSON in the database
   const recipeIngredients = recipe.ingredients as string[];
   const recipeInstructions = recipe.instructions as string[];
 
-  const handleSaveRecipe = async () => {
-    if (savedRecipe) return; // Already saved
-
-    setIsSaving(true);
-    try {
-      const result = await saveRecipe({
-        title: recipe.title,
-        ingredients: recipeIngredients,
-        instructions: recipeInstructions,
-        dateCreated: recipe.dateCreated,
-        // Add default values for optional fields
-        servings: 4,
-        prepTime: 30,
-        cookTime: 45,
-      });
-
-      onRecipeSaved?.(result);
-    } catch (error) {
-      console.error('Failed to save recipe:', error);
-      // You could add a toast notification here
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleToggleFavorite = async () => {
-    if (!savedRecipe) {
-      // Save first, then favorite
-      await handleSaveRecipe();
-      return;
-    }
-
     setIsTogglingFavorite(true);
     try {
       const result = await toggleFavoriteRecipe({
-        recipeId: savedRecipe.id,
+        recipeId: recipe.id,
       });
 
       onRecipeUpdated?.(result);

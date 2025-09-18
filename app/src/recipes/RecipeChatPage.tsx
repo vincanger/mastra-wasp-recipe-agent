@@ -31,7 +31,7 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
   const [displayRecipeIds, setDisplayRecipeIds] = useState<string[] | undefined>(undefined);
   
   // Use Wasp's useQuery to fetch user recipes, filtered by displayRecipeIds when available
-  const { data: recipes = [], isLoading: recipesLoading, refetch: refetchRecipes } = useQuery(getUserRecipes, {
+  const { data: recipes = [], isLoading: recipesLoading } = useQuery(getUserRecipes, {
     savedOnly: false,
     favoritesOnly: false,
     recipeIds: displayRecipeIds,
@@ -69,7 +69,6 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
     setIsLoading(true);
 
     try {
-      // Send message to agent
       const response = await chatWithRecipeAgent({
         message: userMessage,
         resourceId: user.id,
@@ -78,23 +77,16 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
 
       let content = response.text;
 
-      // If recipes were created, append a message and refetch the recipes
       if (response.recipesCreated && response.recipesCreated > 0) {
-        content += `\n\nI've created ${response.recipesCreated} recipe${response.recipesCreated > 1 ? 's' : ''} for you. They're now available in your recipe list.`;
-        
         // Clear display filter to show all recipes including newly created ones
         setDisplayRecipeIds(undefined);
-        
-        // Refetch recipes to show the newly created ones
-        await refetchRecipes();
       }
       
       // If displayRecipeIds were returned, update the filter
-      if (response.displayRecipeIds) {
+      if (response.displayRecipeIds && response.displayRecipeIds.length > 0) {
         setDisplayRecipeIds(response.displayRecipeIds);
       }
 
-      // Add agent response to UI
       setMessages((prevMessages) => [
         ...prevMessages,
         { role: "assistant", content },
@@ -143,14 +135,19 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
               No recipes generated yet. Start chatting to create some!
             </p>
           ) : (
-            recipes.map((recipe, index) => (
+            recipes.map((recipe) => (
               <RecipeCard
-                key={`${recipe.title}-${index}`}
+                key={`${recipe.id}`}
                 recipe={recipe}
-                isSelected={selectedRecipe?.title === recipe.title}
+                isSelected={selectedRecipe?.id === recipe.id}
                 onClick={() => {
                   setSelectedRecipe(recipe);
                   setIsMobileSidebarOpen(false);
+                }}
+                onRecipeUpdated={async (updatedRecipe) => {
+                  if (selectedRecipe?.id === updatedRecipe.id) {
+                    setSelectedRecipe(updatedRecipe);
+                  }
                 }}
               />
             ))
@@ -261,9 +258,9 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
                 // TODO: Implement calendar view
                 console.log("View calendar");
               }}
-              onRecipeUpdated={async () => {
-                // Refetch recipes to get updated data
-                await refetchRecipes();
+              onRecipeUpdated={async (updatedRecipe) => {
+                // Update the selected recipe with the new data
+                setSelectedRecipe(updatedRecipe);
               }}
             />
           ) : (

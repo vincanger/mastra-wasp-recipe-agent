@@ -1,6 +1,6 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
-import { LibSQLStore } from "@mastra/libsql";
+import { LibSQLStore, LibSQLVector } from "@mastra/libsql";
 import { openai } from "@ai-sdk/openai";
 import { getCurrentDate } from "../tools/get-current-date";
 import { runGenerateFullRecipesWorkflow } from "../tools/run-generate-full-recipes-workflow";
@@ -43,8 +43,7 @@ const workingMemoryTemplate = `
 export const recipeOrchestrator = new Agent({
   id: AgentId.RecipeOrchestrator,
   name: AgentId.RecipeOrchestrator,
-  instructions:
-    `You are a friendly culinary assistant. Brainstorm recipe ideas and chat about cooking.
+  instructions: `You are a friendly culinary assistant. Brainstorm recipe ideas and chat about cooking.
     
     You have access to the user's personal recipe collection and can:
     - Search through their saved and favorite recipes
@@ -56,7 +55,7 @@ export const recipeOrchestrator = new Agent({
     When the user asks for full/detailed instructions for new recipe ideas, call the 'runGenerateFullRecipesWorkflow' tool with an array of titles.
     
     Always be helpful and provide cooking tips, substitutions, and meal planning advice.`,
-  model: openai("gpt-4o-mini"),
+  model: openai('gpt-4o-mini'),
   tools: {
     getCurrentDate,
     runGenerateFullRecipesWorkflow,
@@ -64,9 +63,14 @@ export const recipeOrchestrator = new Agent({
   },
   memory: new Memory({
     storage: new LibSQLStore({
-      url: "file:../memory.db", // local file-system database. Location is relative to the output directory `.mastra/output`
+      url: 'file:../memory.db',
     }),
+    vector: new LibSQLVector({
+      connectionUrl: 'file:../memory.db',
+    }),
+    embedder: openai.embedding('text-embedding-3-small'),
     options: {
+      semanticRecall: true,
       lastMessages: 12, // default is 10
       workingMemory: {
         enabled: true,

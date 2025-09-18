@@ -128,7 +128,6 @@ model ElaboratedRecipe {
   title                     String
   ingredients               Json            // Array of strings
   instructions              Json            // Array of strings
-  isSaved                   Boolean         @default(false)
   isFavorite                Boolean         @default(false)
   dateCreated               String          // Date when recipe was created
   

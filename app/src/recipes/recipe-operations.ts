@@ -4,7 +4,7 @@ import type {
   GetUserRecipes, 
   DeleteRecipe, 
 } from 'wasp/server/operations';
-import type { CleanupUnsavedRecipesJob } from 'wasp/server/jobs'
+import type { CleanupUnfavoritedRecipes } from 'wasp/server/jobs';
 import type { ElaboratedRecipe } from 'wasp/entities';
 import { HttpError } from 'wasp/server';
 
@@ -36,7 +36,6 @@ export const saveRecipe: SaveRecipe<SaveRecipeInput, ElaboratedRecipe> = async (
         prepTime: args.prepTime,
         cookTime: args.cookTime,
         tags: args.tags,
-        isSaved: true,
         isFavorite: false,
       },
     });
@@ -68,12 +67,10 @@ export const toggleFavoriteRecipe: ToggleFavoriteRecipe<ToggleFavoriteInput, Ela
       throw new HttpError(404, 'Recipe not found');
     }
 
-    // Toggle favorite status
     return await context.entities.ElaboratedRecipe.update({
       where: { id: args.recipeId },
       data: {
         isFavorite: !recipe.isFavorite,
-        isSaved: true, // Auto-save when favoriting
       },
     });
   } catch (error) {
@@ -86,7 +83,6 @@ export const toggleFavoriteRecipe: ToggleFavoriteRecipe<ToggleFavoriteInput, Ela
 };
 
 type GetUserRecipesInput = {
-  savedOnly?: boolean;
   favoritesOnly?: boolean;
   recipeIds?: string[]; // Optional array of specific recipe IDs to filter by
 };
@@ -100,10 +96,6 @@ export const getUserRecipes: GetUserRecipes<GetUserRecipesInput, ElaboratedRecip
     const whereConditions: any = {
       userId: context.user.id,
     };
-
-    if (args.savedOnly) {
-      whereConditions.isSaved = true;
-    }
 
     if (args.favoritesOnly) {
       whereConditions.isFavorite = true;
@@ -165,26 +157,26 @@ export const deleteRecipe: DeleteRecipe<DeleteRecipeInput, { success: boolean }>
 };
 
 // Cron job function to cleanup unsaved recipes older than 7 days
-export const cleanupUnsavedRecipes: CleanupUnsavedRecipesJob<never, { deletedCount: number }> = async (_args, context) => {
+export const cleanupUnfavoritedRecipes: CleanupUnfavoritedRecipes<never, { deletedCount: number }> = async (_args, context) => {
   try {
-    // Delete recipes that are not saved and older than 7 days
+    // Delete recipes that are not favorited and older than 7 days
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const result = await context.entities.ElaboratedRecipe.deleteMany({
       where: {
-        isSaved: false,
+        isFavorite: false,
         createdAt: {
           lt: sevenDaysAgo,
         },
       },
     });
 
-    console.log(`Cleanup job: Deleted ${result.count} unsaved recipes older than 7 days`);
-    
+    console.log(`Cleanup job: Deleted ${result.count} unfavorited recipes older than 7 days`);
+
     return { deletedCount: result.count };
   } catch (error) {
-    console.error('Failed to cleanup unsaved recipes:', error);
-    throw new HttpError(500, 'Failed to cleanup unsaved recipes');
+    console.error('Failed to cleanup unfavorited recipes:', error);
+    throw new HttpError(500, 'Failed to cleanup unfavorited recipes');
   }
 };
