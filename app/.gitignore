@@ -1,4 +1,5 @@
 .wasp/
+.mastra/
 node_modules/
 
 # Ignore all dotenv files by default to prevent accidentally committing any secrets.

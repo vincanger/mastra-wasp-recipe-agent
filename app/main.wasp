@@ -154,7 +154,7 @@ page RecipeChatPage {
 }
 
 action chatWithRecipeAgent {
-  fn: import { chatWithRecipeAgent } from "@src/recipes/operations",
+  fn: import { chatWithRecipeAgent } from "@src/recipes/chat-operations",
   entities: [ElaboratedRecipe]
 }
 
