@@ -3,11 +3,11 @@ import { PinoLogger } from "@mastra/loggers";
 import { LibSQLStore } from "@mastra/libsql";
 import { recipeOrchestrator } from "./agents/recipe-orchestrator";
 import { recipeElaborator } from "./agents/recipe-elaborator";
-import { generateFullRecipesWorkflow } from "./workflow/generate-full-recipes";
+import { elaborateRecipesWorkflow } from "./workflow/generate-full-recipes";
 
 export const mastra: Mastra = new Mastra({
   agents: { recipeOrchestrator, recipeElaborator },
-  workflows: { generateFullRecipesWorkflow },
+  workflows: { elaborateRecipesWorkflow },
 
   storage: new LibSQLStore({
     url: 'file:../memory.db',

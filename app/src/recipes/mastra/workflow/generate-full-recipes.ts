@@ -10,7 +10,7 @@ export const elaboratedRecipeSchema = z.object({
   instructions: z.array(z.string()),
   dateCreated: z.string(),
 });
-export type FormattedRecipe = z.infer<typeof elaboratedRecipeSchema>;
+export type ElaboratedRecipe = z.infer<typeof elaboratedRecipeSchema>;
 
 export const elaborateRecipesInputSchema = z.object({
   titles: z.array(z.string()).min(1),
@@ -18,7 +18,7 @@ export const elaborateRecipesInputSchema = z.object({
 export const elaborateRecipesOutputSchema = z.object({
   recipes: z.array(elaboratedRecipeSchema),
 });
-export type ElaborateRecipesOutput = z.infer<typeof elaborateRecipesOutputSchema>;
+export type GenerateElaboratedRecipesOutput = z.infer<typeof elaborateRecipesOutputSchema>;
 
 const generateElaboratedRecipesStep = createStep({
   id: "generateElaboratedRecipesStep",
@@ -52,8 +52,8 @@ const generateElaboratedRecipesStep = createStep({
   },
 });
 
-export const generateFullRecipesWorkflow = createWorkflow({
-  id: WorkflowId.GenerateFullRecipesWorkflow,
+export const elaborateRecipesWorkflow = createWorkflow({
+  id: WorkflowId.ElaborateRecipesWorkflow,
   inputSchema: elaborateRecipesInputSchema,
   outputSchema: elaborateRecipesOutputSchema,
 })

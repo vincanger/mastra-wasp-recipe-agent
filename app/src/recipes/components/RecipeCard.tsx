@@ -42,7 +42,7 @@ export function RecipeCard({ recipe, isSelected, onClick, onRecipeUpdated }: Rec
     <Card
       className={`
         cursor-pointer transition-all duration-200 hover:shadow-md mb-3
-        ${isSelected ? 'border-primary shadow-md bg-accent/5' : 'hover:border-gray-300'}
+        ${isSelected ? 'border-primary shadow-md bg-gray-100' : 'hover:border-gray-300'}
       `}
       onClick={onClick}
     >

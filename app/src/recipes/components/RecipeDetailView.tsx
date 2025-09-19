@@ -1,12 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { Separator } from "../../components/ui/separator";
-import { Button } from "../../components/ui/button";
-import { ScrollArea } from "../../components/ui/scroll-area";
-import type { ElaboratedRecipe } from "wasp/entities";
-import { toggleFavoriteRecipe } from "wasp/client/operations";
-import { Clock, Users, ChefHat, Calendar, Heart, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { ScrollArea } from '../../components/ui/scroll-area';
+import type { ElaboratedRecipe } from 'wasp/entities';
+import { toggleFavoriteRecipe } from 'wasp/client/operations';
+import { Clock, Users, ChefHat, Calendar, Heart, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 interface RecipeDetailViewProps {
   recipe: ElaboratedRecipe;
@@ -15,12 +13,7 @@ interface RecipeDetailViewProps {
   onRecipeUpdated?: (updatedRecipe: ElaboratedRecipe) => void;
 }
 
-export function RecipeDetailView({ 
-  recipe,
-  onViewFullRecipe, 
-  onViewCalendar,
-  onRecipeUpdated
-}: RecipeDetailViewProps) {
+export function RecipeDetailView({ recipe, onViewFullRecipe, onViewCalendar, onRecipeUpdated }: RecipeDetailViewProps) {
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
 
   // Cast JSON fields to arrays since they're stored as JSON in the database
@@ -49,8 +42,15 @@ export function RecipeDetailView({
         <ScrollArea className='h-full'>
           <div className='p-6'>
             <div className='mb-6'>
-              <h2 className='text-2xl font-bold mb-3'>{recipe.title}</h2>
-
+              <div className='flex items-center justify-between'>
+                <h2 className='text-2xl font-bold mb-3'>{recipe.title}</h2>
+                <div className='flex justify-center'>
+                  <Button variant={recipe.isFavorite ? 'default' : 'outline'} onClick={handleToggleFavorite} disabled={isTogglingFavorite} className='flex items-center gap-2'>
+                    {isTogglingFavorite ? <Loader2 className='h-4 w-4 animate-spin' /> : <Heart className={`h-4 w-4 ${recipe.isFavorite ? 'fill-current' : ''}`} />}
+                    {recipe.isFavorite ? 'Favorited' : 'Favorite'}
+                  </Button>
+                </div>
+              </div>
               <div className='flex flex-wrap gap-4 text-sm text-muted-foreground mb-4'>
                 <div className='flex items-center gap-1'>
                   <Calendar className='w-4 h-4' />
@@ -105,26 +105,6 @@ export function RecipeDetailView({
             </Card>
           </div>
         </ScrollArea>
-      </div>
-
-      <div className='border-t p-4 bg-background space-y-3'>
-        {/* Favorite Action */}
-        <div className='flex justify-center'>
-          <Button variant={recipe.isFavorite ? 'default' : 'outline'} onClick={handleToggleFavorite} disabled={isTogglingFavorite} className='flex items-center gap-2'>
-            {isTogglingFavorite ? <Loader2 className='h-4 w-4 animate-spin' /> : <Heart className={`h-4 w-4 ${recipe.isFavorite ? 'fill-current' : ''}`} />}
-            {recipe.isFavorite ? 'Favorited' : 'Favorite'}
-          </Button>
-        </div>
-
-        {/* View Actions */}
-        <div className='flex gap-3 justify-center'>
-          <Button variant='outline' onClick={onViewFullRecipe} className='flex-1 max-w-[200px]'>
-            View Full Recipe
-          </Button>
-          <Button variant='outline' onClick={onViewCalendar} className='flex-1 max-w-[200px]'>
-            View Calendar
-          </Button>
-        </div>
       </div>
     </div>
   );

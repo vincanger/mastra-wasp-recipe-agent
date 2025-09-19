@@ -3,7 +3,7 @@ import { Memory } from "@mastra/memory";
 import { LibSQLStore, LibSQLVector } from "@mastra/libsql";
 import { openai } from "@ai-sdk/openai";
 import { getCurrentDate } from "../tools/get-current-date";
-import { runGenerateFullRecipesWorkflow } from "../tools/run-generate-full-recipes-workflow";
+import { runElaborateRecipesWorkflow } from "../tools/run-elaborate-recipes-workflow";
 import { getUserRecipes } from "../tools/get-user-recipes";
 import { AgentId } from "./ids";
 
@@ -24,41 +24,52 @@ const workingMemoryTemplate = `
   - Ingredient 2
   - Ingredient 3
 
-### Recipes already made and stored
-  - Recipe 1
-  - Recipe 2
-  - Recipe 3
-
 ### Ingredients to buy
   - Ingredient 1
   - Ingredient 2
   - Ingredient 3
 
+### Recipes already eaten/cooked
+  - Recipe 1
+  - Recipe 2
+  - Recipe 3
+
 ### Meals to make
   - Recipe 1
   - Recipe 2
   - Recipe 3
-`
+`;
 
 export const recipeOrchestrator = new Agent({
   id: AgentId.RecipeOrchestrator,
   name: AgentId.RecipeOrchestrator,
-  instructions: `You are a friendly culinary assistant. Brainstorm recipe ideas and chat about cooking.
+  instructions: `You are a friendly culinary assistant that helps the user brainstorm recipe ideas and chat about cooking.
     
     You have access to the user's personal recipe collection and can:
     - Search through their saved and favorite recipes
     - Help them find recipes they've previously saved
     - Generate new detailed recipes when requested
+
+    Update your working memory  when the user provides:
+    - Total Prep & CookTime Preferences
+    - Ingredients Preferences
+    - Difficulty Preferences
+    - Style Preferences
+    - Planning Topic
+    - Ingredients on hand
+    - Ingredients to buy
     
     When the user asks about their existing recipes, use the 'getUserRecipes' tool to search their collection. 
     The user ID is automatically provided - you don't need to specify it.
     When the user asks for full/detailed instructions for new recipe ideas, call the 'runGenerateFullRecipesWorkflow' tool with an array of titles.
     
-    Always be helpful and provide cooking tips, substitutions, and meal planning advice.`,
+    Always be helpful and provide cooking tips, substitutions, and meal planning advice.
+    DO NOT return full recipes, only provide recipe ideas and summaries of instructions.
+    `,
   model: openai('gpt-4o-mini'),
   tools: {
     getCurrentDate,
-    runGenerateFullRecipesWorkflow,
+    runElaborateRecipesWorkflow,
     getUserRecipes,
   },
   memory: new Memory({

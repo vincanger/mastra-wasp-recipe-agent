@@ -3,8 +3,8 @@ import { elaborateRecipesInputSchema, elaborateRecipesOutputSchema } from "../wo
 import { ToolId } from "./ids";
 import { WorkflowId } from "../workflow/ids";
 
-export const runGenerateFullRecipesWorkflow: Tool<typeof elaborateRecipesInputSchema, typeof elaborateRecipesOutputSchema> = createTool({
-  id: ToolId.RunGenerateFullRecipesWorkflow,
+export const runElaborateRecipesWorkflow: Tool<typeof elaborateRecipesInputSchema, typeof elaborateRecipesOutputSchema> = createTool({
+  id: ToolId.RunElaborateRecipesWorkflow,
   description: "Generate full, detailed recipes for the provided titles by running the recipe workflow.",
   inputSchema: elaborateRecipesInputSchema,
   outputSchema: elaborateRecipesOutputSchema,
@@ -17,7 +17,7 @@ export const runGenerateFullRecipesWorkflow: Tool<typeof elaborateRecipesInputSc
     }
     
     const run = await mastra
-      .getWorkflow(WorkflowId.GenerateFullRecipesWorkflow)
+      .getWorkflow(WorkflowId.ElaborateRecipesWorkflow)
       .createRunAsync();
     const response = await run.start({ inputData: { titles } });
     
@@ -25,7 +25,7 @@ export const runGenerateFullRecipesWorkflow: Tool<typeof elaborateRecipesInputSc
       throw new Error("Recipe generation workflow failed");
     }
     
-    console.log(`response from ${ToolId.RunGenerateFullRecipesWorkflow} tool: `, response)
+    console.log(`response from ${ToolId.RunElaborateRecipesWorkflow} tool: `, response)
     return response.result
   },
 });

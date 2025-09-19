@@ -1,6 +1,7 @@
 import type { Tool } from "@mastra/core/tools";
 
-import { ElaboratedRecipeSchema } from "../../lib/zod";
+
+import { ElaboratedRecipeSchema } from "../../../lib/zod";
 import { createTool } from '@mastra/core/tools';
 import { z } from "zod";
 import { prisma } from "wasp/server";
@@ -28,6 +29,8 @@ const outputSchema = z.object({
   favoriteCount: z.number(),
   summary: z.string(),
 });
+
+export type GetUserRecipesOutput = z.infer<typeof outputSchema>;
 
 export const getUserRecipes: Tool<typeof inputSchema, typeof outputSchema> = 
   createTool({
