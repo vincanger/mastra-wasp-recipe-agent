@@ -1,5 +1,4 @@
 import type { 
-  SaveRecipe, 
   ToggleFavoriteRecipe, 
   GetUserRecipes, 
   DeleteRecipe, 
@@ -8,42 +7,6 @@ import type { CleanupUnfavoritedRecipes } from 'wasp/server/jobs';
 import type { ElaboratedRecipe } from 'wasp/entities';
 import { HttpError } from 'wasp/server';
 
-type SaveRecipeInput = {
-  title: string;
-  ingredients: string[];
-  instructions: string[];
-  dateCreated: string;
-  servings?: number;
-  prepTime?: number;
-  cookTime?: number;
-  tags?: string[];
-};
-
-export const saveRecipe: SaveRecipe<SaveRecipeInput, ElaboratedRecipe> = async (args, context) => {
-  if (!context.user) {
-    throw new HttpError(401, 'Not authorized');
-  }
-
-  try {
-    return await context.entities.ElaboratedRecipe.create({
-      data: {
-        userId: context.user.id,
-        title: args.title,
-        ingredients: args.ingredients,
-        instructions: args.instructions,
-        dateCreated: args.dateCreated,
-        servings: args.servings,
-        prepTime: args.prepTime,
-        cookTime: args.cookTime,
-        tags: args.tags,
-        isFavorite: false,
-      },
-    });
-  } catch (error) {
-    console.error('Failed to save recipe:', error);
-    throw new HttpError(500, 'Failed to save recipe');
-  }
-};
 
 type ToggleFavoriteInput = {
   recipeId: string;

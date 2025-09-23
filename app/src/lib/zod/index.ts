@@ -199,6 +199,7 @@ export const ElaboratedRecipeSchema = z.object({
   prepTime: z.number().int().nullable(),
   cookTime: z.number().int().nullable(),
   tags: JsonValueSchema.nullable(),
+  thumbnailUrl: z.string().nullable(),
 })
 
 export type ElaboratedRecipe = z.infer<typeof ElaboratedRecipeSchema>

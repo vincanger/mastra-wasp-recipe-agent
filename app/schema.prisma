@@ -111,4 +111,5 @@ model ElaboratedRecipe {
   prepTime                  Int?            // in minutes
   cookTime                  Int?            // in minutes
   tags                      Json?           // Array of strings
+  thumbnailUrl              String?         // S3 URL for recipe thumbnail image
 }

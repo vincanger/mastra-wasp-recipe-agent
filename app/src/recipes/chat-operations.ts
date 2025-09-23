@@ -1,11 +1,12 @@
 import type { ChatWithRecipeAgent } from 'wasp/server/operations';
-import type { GenerateElaboratedRecipesOutput, ElaboratedRecipe } from './mastra/workflow/generate-full-recipes';
+import type { GenerateElaboratedRecipesOutput, ElaboratedRecipe } from '../mastra/workflow/elaborate-recipes';
 
 import { HttpError } from 'wasp/server';
-import { mastra } from './mastra';
-import { ToolId } from './mastra/tools/ids';
-import { AgentId } from './mastra/agents/ids';
-import { GetUserRecipesOutput, setCurrentUserId } from './mastra/tools/get-user-recipes';
+import { mastra } from '../mastra';
+import { ToolId } from '../mastra/tools/ids';
+import { AgentId } from '../mastra/agents/ids';
+import { GetUserRecipesOutput } from '../mastra/tools/get-user-recipes';
+import { setCurrentUserId } from '../mastra/tools/ids';
 
 type ToolCallResponse = ElaboratedRecipeResponse | GetUserRecipesResponse;
 type ElaboratedRecipeResponse = {
@@ -137,6 +138,7 @@ async function saveAndReturnRecipeData({
         ingredients: recipe.ingredients,
         instructions: recipe.instructions,
         dateCreated: recipe.dateCreated,
+        thumbnailUrl: recipe.thumbnailUrl ?? undefined,
         isFavorite: false,
       },
     });

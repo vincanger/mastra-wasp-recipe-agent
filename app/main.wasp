@@ -158,11 +158,6 @@ action chatWithRecipeAgent {
   entities: [ElaboratedRecipe]
 }
 
-action saveRecipe {
-  fn: import { saveRecipe } from "@src/recipes/recipe-operations",
-  entities: [ElaboratedRecipe]
-}
-
 action toggleFavoriteRecipe {
   fn: import { toggleFavoriteRecipe } from "@src/recipes/recipe-operations",
   entities: [ElaboratedRecipe]

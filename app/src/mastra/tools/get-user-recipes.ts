@@ -1,21 +1,14 @@
 import type { Tool } from "@mastra/core/tools";
 
 
-import { ElaboratedRecipeSchema } from "../../../lib/zod";
+import { ElaboratedRecipeSchema } from "../../lib/zod";
 import { createTool } from '@mastra/core/tools';
 import { z } from "zod";
 import { prisma } from "wasp/server";
 import { Prisma } from "@prisma/client";
 import { ToolId } from "./ids";
+import { getCurrentUserId } from "./ids";
 
-// Global state to store current user ID for tool execution
-let currentUserId: string | null = null;
-
-export const setCurrentUserId = (userId: string) => {
-  currentUserId = userId;
-};
-
-export const getCurrentUserId = () => currentUserId;
 
 const inputSchema = z.object({
   favoritesOnly: z.boolean().optional().describe("If true, only return favorite recipes"),
@@ -51,12 +44,7 @@ export const getUserRecipes: Tool<typeof inputSchema, typeof outputSchema> =
     execute: async (executionContext) => {
       const { favoritesOnly, searchQuery } = executionContext.context;
       try {
-        // Get userId from global state set before tool execution
         const userId = getCurrentUserId();
-        
-        if (!userId) {
-          throw new Error("User ID not available - make sure setCurrentUserId was called");
-        }
 
         // Build the where clause for filtering
         const whereConditions: Prisma.ElaboratedRecipeWhereInput = {

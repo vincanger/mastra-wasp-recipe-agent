@@ -9,6 +9,7 @@ import { throttleWithTrailingInvocation } from '../../../shared/utils';
 import { UserDropdown } from '../../../user/UserDropdown';
 import { UserMenuItems } from '../../../user/UserMenuItems';
 import { useIsLandingPage } from '../../hooks/useIsLandingPage';
+import { useDisableNavbarScroll } from '../../hooks/useDisableNavbarScroll';
 import logo from '../../static/logo.webp';
 import DarkModeSwitcher from '../DarkModeSwitcher';
 import { Announcement } from './Announcement';
@@ -21,8 +22,15 @@ export interface NavigationItem {
 export default function NavBar({ navigationItems }: { navigationItems: NavigationItem[] }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const isLandingPage = useIsLandingPage();
+  const disableScrollBehavior = useDisableNavbarScroll();
 
   useEffect(() => {
+    // Don't set up scroll listener if scroll behavior is disabled
+    if (disableScrollBehavior) {
+      setIsScrolled(false);
+      return;
+    }
+
     const throttledHandler = throttleWithTrailingInvocation(() => {
       setIsScrolled(window.scrollY > 0);
     }, 50);
@@ -33,23 +41,23 @@ export default function NavBar({ navigationItems }: { navigationItems: Navigatio
       window.removeEventListener('scroll', throttledHandler);
       throttledHandler.cancel();
     };
-  }, []);
+  }, [disableScrollBehavior]);
 
   return (
     <>
       {isLandingPage && <Announcement />}
-      <header className={cn('sticky top-0 z-50 transition-all duration-300', isScrolled && 'top-4')}>
+      <header className={cn('sticky top-0 z-50 transition-all duration-300', isScrolled && !disableScrollBehavior && 'top-4')}>
         <div
           className={cn('transition-all duration-300', {
             'mx-4 md:mx-20 pr-2 lg:pr-0 rounded-full shadow-lg bg-background/90 backdrop-blur-lg border border-border':
-              isScrolled,
-            'mx-0 bg-background/80 backdrop-blur-lg border-b border-border': !isScrolled,
+              isScrolled && !disableScrollBehavior,
+            'mx-0 bg-background/80 backdrop-blur-lg border-b border-border': !isScrolled || disableScrollBehavior,
           })}
         >
           <nav
             className={cn('flex items-center justify-between transition-all duration-300', {
-              'p-3 lg:px-6': isScrolled,
-              'p-6 lg:px-8': !isScrolled,
+              'p-3 lg:px-6': isScrolled && !disableScrollBehavior,
+              'p-6 lg:px-8': !isScrolled || disableScrollBehavior,
             })}
             aria-label='Global'
           >
@@ -58,11 +66,11 @@ export default function NavBar({ navigationItems }: { navigationItems: Navigatio
                 to={routes.LandingPageRoute.to}
                 className='flex items-center text-foreground duration-300 ease-in-out hover:text-primary transition-colors'
               >
-                <NavLogo isScrolled={isScrolled} />
+                <NavLogo isScrolled={isScrolled && !disableScrollBehavior} />
                 <span
                   className={cn('font-semibold leading-6 text-foreground transition-all duration-300', {
-                    'ml-2 text-sm': !isScrolled,
-                    'ml-2 text-xs': isScrolled,
+                    'ml-2 text-sm': !isScrolled || disableScrollBehavior,
+                    'ml-2 text-xs': isScrolled && !disableScrollBehavior,
                   })}
                 >
                   Your SaaS
@@ -73,8 +81,8 @@ export default function NavBar({ navigationItems }: { navigationItems: Navigatio
                 {renderNavigationItems(navigationItems)}
               </ul>
             </div>
-            <NavBarMobileMenu isScrolled={isScrolled} navigationItems={navigationItems} />
-            <NavBarDesktopUserDropdown isScrolled={isScrolled} />
+            <NavBarMobileMenu isScrolled={isScrolled && !disableScrollBehavior} navigationItems={navigationItems} />
+            <NavBarDesktopUserDropdown isScrolled={isScrolled && !disableScrollBehavior} />
           </nav>
         </div>
       </header>

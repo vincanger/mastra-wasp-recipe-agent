@@ -1,12 +1,18 @@
 import { createTool, type Tool } from "@mastra/core/tools";
-import { elaborateRecipesInputSchema, elaborateRecipesOutputSchema } from "../workflow/generate-full-recipes";
+import { z } from "zod";
+import { elaborateRecipesOutputSchema } from "../workflow/elaborate-recipes";
 import { ToolId } from "./ids";
 import { WorkflowId } from "../workflow/ids";
+import { getCurrentUserId } from "./ids";
 
-export const runElaborateRecipesWorkflow: Tool<typeof elaborateRecipesInputSchema, typeof elaborateRecipesOutputSchema> = createTool({
+const toolInputSchema = z.object({
+  titles: z.array(z.string()).min(1),
+});
+
+export const runElaborateRecipesWorkflow: Tool<typeof toolInputSchema, typeof elaborateRecipesOutputSchema> = createTool({
   id: ToolId.RunElaborateRecipesWorkflow,
   description: "Generate full, detailed recipes for the provided titles by running the recipe workflow.",
-  inputSchema: elaborateRecipesInputSchema,
+  inputSchema: toolInputSchema,
   outputSchema: elaborateRecipesOutputSchema,
   execute: async (executionContext) => {
     const { titles } = executionContext.context;
@@ -16,10 +22,12 @@ export const runElaborateRecipesWorkflow: Tool<typeof elaborateRecipesInputSchem
       throw new Error("Mastra is not available");
     }
     
+    const userId = getCurrentUserId();
+    
     const run = await mastra
       .getWorkflow(WorkflowId.ElaborateRecipesWorkflow)
       .createRunAsync();
-    const response = await run.start({ inputData: { titles } });
+    const response = await run.start({ inputData: { titles, userId } });
     
     if (response.status !== "success") {
       throw new Error("Recipe generation workflow failed");
