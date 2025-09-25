@@ -3,7 +3,7 @@ import { Memory } from "@mastra/memory";
 import { LibSQLStore, LibSQLVector } from "@mastra/libsql";
 import { openai } from "@ai-sdk/openai";
 import { getCurrentDate } from "../tools/get-current-date";
-import { runElaborateRecipesWorkflow } from "../tools/run-elaborate-recipes-workflow";
+import { runGenerateCompleteRecipes } from "../tools/run-generate-complete-recipes";
 import { getUserRecipes } from "../tools/get-user-recipes";
 import { AgentId } from "./ids";
 
@@ -69,7 +69,7 @@ export const recipeOrchestrator = new Agent({
   model: openai('gpt-4o-mini'),
   tools: {
     getCurrentDate,
-    runElaborateRecipesWorkflow,
+    runGenerateCompleteRecipes,
     getUserRecipes,
   },
   memory: new Memory({

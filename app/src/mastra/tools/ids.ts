@@ -1,5 +1,5 @@
 export enum ToolId {
-  RunElaborateRecipesWorkflow = 'runElaborateRecipesWorkflow',
+  RunGenerateCompleteRecipes = 'runGenerateCompleteRecipes',
   GetUserRecipes = 'getUserRecipes',
   GenerateRecipeThumbnail = 'generateRecipeThumbnail',
 }
@@ -7,7 +7,7 @@ export enum ToolId {
 // Global state to store current user ID for tool execution
 let currentUserId: string | null = null;
 
-export const setCurrentUserId = (userId: string) => {
+export const setUserIdForToolUse = (userId: string) => {
   currentUserId = userId;
 };
 

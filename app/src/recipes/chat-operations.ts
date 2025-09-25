@@ -1,32 +1,20 @@
 import type { ChatWithRecipeAgent } from 'wasp/server/operations';
-import type { GenerateElaboratedRecipesOutput, ElaboratedRecipe } from '../mastra/workflow/elaborate-recipes';
+import type { ElaboratedRecipe } from '../mastra/schemas/recipe-schema';
+import type { GenerateCompleteRecipesResponse, AnyToolResponse } from '../mastra/tools/responses';
 
+import { ToolResultExtractor } from '../mastra/tools/responses';
 import { HttpError } from 'wasp/server';
 import { mastra } from '../mastra';
 import { ToolId } from '../mastra/tools/ids';
 import { AgentId } from '../mastra/agents/ids';
-import { GetUserRecipesOutput } from '../mastra/tools/get-user-recipes';
-import { setCurrentUserId } from '../mastra/tools/ids';
-
-type ToolCallResponse = ElaboratedRecipeResponse | GetUserRecipesResponse;
-type ElaboratedRecipeResponse = {
-  payload: {
-    toolName: ToolId.RunElaborateRecipesWorkflow;
-    result: GenerateElaboratedRecipesOutput;
-  };
-};
-type GetUserRecipesResponse = {
-  payload: {
-    toolName: ToolId.GetUserRecipes;
-    result: GetUserRecipesOutput;
-  };
-};
+import { setUserIdForToolUse } from '../mastra/tools/ids';
 
 type ChatWithRecipeAgentInput = {
   message: string;
   resourceId: string;
   threadId: string;
 };
+
 export type ChatWithRecipeAgentOutput = {
   text: string;
   toolIdsCalled: string[];
@@ -41,8 +29,8 @@ export const chatWithRecipeAgent: ChatWithRecipeAgent<ChatWithRecipeAgentInput, 
     throw new HttpError(401, 'Not authorized');
   }
 
-  // Set the current user ID for tools to access
-  setCurrentUserId(resourceId);
+  // Set the current user ID for mastra tools to access
+  setUserIdForToolUse(resourceId);
 
   const recipeAgent = mastra.getAgent(AgentId.RecipeOrchestrator);
 
@@ -57,53 +45,49 @@ export const chatWithRecipeAgent: ChatWithRecipeAgent<ChatWithRecipeAgentInput, 
   console.log(`${AgentId.RecipeOrchestrator} agent text: `, text);
 
   const displayRecipeIds: string[] = [];
-  const toolIdsCalled: string[] = [];
   let completionText = text;
   let numRecipesCreated = 0;
   const prependedToolCallsCompletionText = 'The following tasks were completed: \n';
 
   if (toolResults.length > 0) {
-    const resultsByToolId = groupToolResultsByToolId(toolResults);
+    // Use the type-safe extractor
+    const toolResultExtractor = new ToolResultExtractor(toolResults as AnyToolResponse[]);
 
-    if (resultsByToolId.has(ToolId.RunElaborateRecipesWorkflow)) {
-      const result = await saveAndReturnRecipeData({ resultsByToolId, context, prependedToolCallsCompletionText });
+    if (toolResultExtractor.hasResults(ToolId.RunGenerateCompleteRecipes)) {
+      const result = await saveAndReturnRecipeData({
+        toolResultExtractor,
+        context,
+        prependedToolCallsCompletionText,
+      });
       numRecipesCreated = result.recipesCreated;
       completionText = result.completionText;
       displayRecipeIds.push(...result.recipeIds);
     }
 
-    if (resultsByToolId.has(ToolId.GetUserRecipes)) {
-      const userRecipeIds = extractRecipeIdsFromUserRecipes({ resultsByToolId });
+    if (toolResultExtractor.hasResults(ToolId.GetUserRecipes)) {
+      const userRecipeIds = extractRecipeIdsFromUserRecipes(toolResultExtractor);
       displayRecipeIds.push(...userRecipeIds);
     }
 
-    toolIdsCalled.push(...toolResults.map((toolResult) => toolResult.payload.toolName));
+    const toolIdsCalled = toolResultExtractor.getCalledToolIds();
+    return {
+      text: completionText,
+      numRecipesCreated,
+      displayRecipeIds,
+      toolIdsCalled: toolIdsCalled.map((id) => id.toString()),
+    };
   }
 
-  return { text: completionText, numRecipesCreated: numRecipesCreated, displayRecipeIds, toolIdsCalled };
+  return { text: completionText, numRecipesCreated: 0, displayRecipeIds, toolIdsCalled: [] };
 };
 
-const groupToolResultsByToolId = (toolResults: ToolCallResponse[]) => {
-  const resultsByToolId = new Map<ToolId, ToolCallResponse[]>();
-
-  toolResults.forEach((toolResult) => {
-    const { toolName } = toolResult.payload;
-    if (!resultsByToolId.has(toolName)) {
-      resultsByToolId.set(toolName, []);
-    }
-    resultsByToolId.get(toolName)!.push(toolResult);
-  });
-
-  return resultsByToolId;
-};
-
-const extractElaborateRecipes = (recipeToolResults: ElaboratedRecipeResponse[]) => {
+const flattenElaboratedRecipesArray = (recipeToolResults: GenerateCompleteRecipesResponse[]): ElaboratedRecipe[] => {
   const recipes: ElaboratedRecipe[] = [];
 
   for (const toolResult of recipeToolResults) {
     const payload = toolResult.payload;
-    payload.result.recipes.forEach((recipe: ElaboratedRecipe) => {
-        recipes.push(recipe);
+    payload.result.recipes.forEach((recipe) => {
+      recipes.push(recipe);
     });
   }
 
@@ -111,11 +95,11 @@ const extractElaborateRecipes = (recipeToolResults: ElaboratedRecipeResponse[]) 
 };
 
 async function saveAndReturnRecipeData({
-  resultsByToolId,
+  toolResultExtractor,
   context,
   prependedToolCallsCompletionText,
 }: {
-  resultsByToolId: ReturnType<typeof groupToolResultsByToolId>;
+  toolResultExtractor: ToolResultExtractor;
   context: Parameters<ChatWithRecipeAgent>[1];
   prependedToolCallsCompletionText: string;
 }) {
@@ -125,9 +109,8 @@ async function saveAndReturnRecipeData({
 
   let recipesCreated = 0;
   const savedRecipeIds: string[] = [];
-  const recipeToolResults = resultsByToolId.get(ToolId.RunElaborateRecipesWorkflow)!;
-  const recipes = extractElaborateRecipes(recipeToolResults as ElaboratedRecipeResponse[]);
-
+  const elaboratedRecipeResults = toolResultExtractor.getResults(ToolId.RunGenerateCompleteRecipes);
+  const recipes = flattenElaboratedRecipesArray(elaboratedRecipeResults);
   const recipeTitles = recipes.map((recipe) => recipe.title);
 
   for (const recipe of recipes) {
@@ -153,27 +136,11 @@ async function saveAndReturnRecipeData({
   return { recipesCreated, completionText, recipeIds: savedRecipeIds };
 }
 
-function extractRecipeIdsFromUserRecipes({ resultsByToolId }: { resultsByToolId: ReturnType<typeof groupToolResultsByToolId> }): string[] {
-  const userRecipeToolResults = resultsByToolId.get(ToolId.GetUserRecipes)! as GetUserRecipesResponse[];
+function extractRecipeIdsFromUserRecipes(extractor: ToolResultExtractor): string[] {
+  const userRecipeToolResults = extractor.getResults(ToolId.GetUserRecipes);
   const payloads = userRecipeToolResults.map((toolResult) => toolResult.payload);
   const recipes = payloads.map((payload) => payload.result.recipes);
   const recipeIds = recipes.flatMap((recipe) => recipe.map((recipe) => recipe.id));
   console.log(`Found ${recipeIds.length} recipe IDs from getUserRecipes tool.`);
   return recipeIds;
 }
-
-// toolResults:  [
-//   {
-//     type: 'tool-result',
-//     runId: 'd1fda321-1e51-40b6-b0d8-e4034586c8f0',
-//     from: 'AGENT',
-//     payload: {
-//       args: [Object],
-//       toolCallId: 'call_D443DNexuR1wR51ojl2RbPYi',
-//       toolName: 'createRecipes',
-//       result: [Object],
-//       providerMetadata: [Object],
-//       providerExecuted: undefined
-//     }
-//   }
-// ]

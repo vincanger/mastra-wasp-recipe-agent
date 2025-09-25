@@ -68,7 +68,7 @@ export const LogsScalarFieldEnumSchema = z.enum(['id','createdAt','message','lev
 
 export const ContactFormMessageScalarFieldEnumSchema = z.enum(['id','createdAt','userId','content','isRead','repliedAt']);
 
-export const ElaboratedRecipeScalarFieldEnumSchema = z.enum(['id','createdAt','updatedAt','userId','title','ingredients','instructions','isFavorite','dateCreated','servings','prepTime','cookTime','tags']);
+export const ElaboratedRecipeScalarFieldEnumSchema = z.enum(['id','createdAt','updatedAt','userId','title','ingredients','instructions','isFavorite','dateCreated','servings','prepTime','cookTime','tags','thumbnailUrl']);
 
 export const SortOrderSchema = z.enum(['asc','desc']);
 
@@ -388,6 +388,7 @@ export const ElaboratedRecipeSelectSchema: z.ZodType<Prisma.ElaboratedRecipeSele
   prepTime: z.boolean().optional(),
   cookTime: z.boolean().optional(),
   tags: z.boolean().optional(),
+  thumbnailUrl: z.boolean().optional(),
   user: z.union([z.boolean(),z.lazy(() => UserArgsSchema)]).optional(),
 }).strict()
 
@@ -903,6 +904,7 @@ export const ElaboratedRecipeWhereInputSchema: z.ZodType<Prisma.ElaboratedRecipe
   prepTime: z.union([ z.lazy(() => IntNullableFilterSchema),z.number() ]).optional().nullable(),
   cookTime: z.union([ z.lazy(() => IntNullableFilterSchema),z.number() ]).optional().nullable(),
   tags: z.lazy(() => JsonNullableFilterSchema).optional(),
+  thumbnailUrl: z.union([ z.lazy(() => StringNullableFilterSchema),z.string() ]).optional().nullable(),
   user: z.union([ z.lazy(() => UserRelationFilterSchema),z.lazy(() => UserWhereInputSchema) ]).optional(),
 }).strict();
 
@@ -920,6 +922,7 @@ export const ElaboratedRecipeOrderByWithRelationInputSchema: z.ZodType<Prisma.El
   prepTime: z.union([ z.lazy(() => SortOrderSchema),z.lazy(() => SortOrderInputSchema) ]).optional(),
   cookTime: z.union([ z.lazy(() => SortOrderSchema),z.lazy(() => SortOrderInputSchema) ]).optional(),
   tags: z.union([ z.lazy(() => SortOrderSchema),z.lazy(() => SortOrderInputSchema) ]).optional(),
+  thumbnailUrl: z.union([ z.lazy(() => SortOrderSchema),z.lazy(() => SortOrderInputSchema) ]).optional(),
   user: z.lazy(() => UserOrderByWithRelationInputSchema).optional()
 }).strict();
 
@@ -943,6 +946,7 @@ export const ElaboratedRecipeWhereUniqueInputSchema: z.ZodType<Prisma.Elaborated
   prepTime: z.union([ z.lazy(() => IntNullableFilterSchema),z.number().int() ]).optional().nullable(),
   cookTime: z.union([ z.lazy(() => IntNullableFilterSchema),z.number().int() ]).optional().nullable(),
   tags: z.lazy(() => JsonNullableFilterSchema).optional(),
+  thumbnailUrl: z.union([ z.lazy(() => StringNullableFilterSchema),z.string() ]).optional().nullable(),
   user: z.union([ z.lazy(() => UserRelationFilterSchema),z.lazy(() => UserWhereInputSchema) ]).optional(),
 }).strict());
 
@@ -960,6 +964,7 @@ export const ElaboratedRecipeOrderByWithAggregationInputSchema: z.ZodType<Prisma
   prepTime: z.union([ z.lazy(() => SortOrderSchema),z.lazy(() => SortOrderInputSchema) ]).optional(),
   cookTime: z.union([ z.lazy(() => SortOrderSchema),z.lazy(() => SortOrderInputSchema) ]).optional(),
   tags: z.union([ z.lazy(() => SortOrderSchema),z.lazy(() => SortOrderInputSchema) ]).optional(),
+  thumbnailUrl: z.union([ z.lazy(() => SortOrderSchema),z.lazy(() => SortOrderInputSchema) ]).optional(),
   _count: z.lazy(() => ElaboratedRecipeCountOrderByAggregateInputSchema).optional(),
   _avg: z.lazy(() => ElaboratedRecipeAvgOrderByAggregateInputSchema).optional(),
   _max: z.lazy(() => ElaboratedRecipeMaxOrderByAggregateInputSchema).optional(),
@@ -983,7 +988,8 @@ export const ElaboratedRecipeScalarWhereWithAggregatesInputSchema: z.ZodType<Pri
   servings: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema),z.number() ]).optional().nullable(),
   prepTime: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema),z.number() ]).optional().nullable(),
   cookTime: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema),z.number() ]).optional().nullable(),
-  tags: z.lazy(() => JsonNullableWithAggregatesFilterSchema).optional()
+  tags: z.lazy(() => JsonNullableWithAggregatesFilterSchema).optional(),
+  thumbnailUrl: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema),z.string() ]).optional().nullable(),
 }).strict();
 
 export const UserCreateInputSchema: z.ZodType<Prisma.UserCreateInput> = z.object({
@@ -1426,6 +1432,7 @@ export const ElaboratedRecipeCreateInputSchema: z.ZodType<Prisma.ElaboratedRecip
   prepTime: z.number().int().optional().nullable(),
   cookTime: z.number().int().optional().nullable(),
   tags: z.union([ z.lazy(() => NullableJsonNullValueInputSchema),InputJsonValueSchema ]).optional(),
+  thumbnailUrl: z.string().optional().nullable(),
   user: z.lazy(() => UserCreateNestedOneWithoutElaboratedRecipesInputSchema)
 }).strict();
 
@@ -1443,6 +1450,7 @@ export const ElaboratedRecipeUncheckedCreateInputSchema: z.ZodType<Prisma.Elabor
   prepTime: z.number().int().optional().nullable(),
   cookTime: z.number().int().optional().nullable(),
   tags: z.union([ z.lazy(() => NullableJsonNullValueInputSchema),InputJsonValueSchema ]).optional(),
+  thumbnailUrl: z.string().optional().nullable()
 }).strict();
 
 export const ElaboratedRecipeUpdateInputSchema: z.ZodType<Prisma.ElaboratedRecipeUpdateInput> = z.object({
@@ -1458,6 +1466,7 @@ export const ElaboratedRecipeUpdateInputSchema: z.ZodType<Prisma.ElaboratedRecip
   prepTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   cookTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   tags: z.union([ z.lazy(() => NullableJsonNullValueInputSchema),InputJsonValueSchema ]).optional(),
+  thumbnailUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   user: z.lazy(() => UserUpdateOneRequiredWithoutElaboratedRecipesNestedInputSchema).optional()
 }).strict();
 
@@ -1475,6 +1484,7 @@ export const ElaboratedRecipeUncheckedUpdateInputSchema: z.ZodType<Prisma.Elabor
   prepTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   cookTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   tags: z.union([ z.lazy(() => NullableJsonNullValueInputSchema),InputJsonValueSchema ]).optional(),
+  thumbnailUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const ElaboratedRecipeCreateManyInputSchema: z.ZodType<Prisma.ElaboratedRecipeCreateManyInput> = z.object({
@@ -1491,6 +1501,7 @@ export const ElaboratedRecipeCreateManyInputSchema: z.ZodType<Prisma.ElaboratedR
   prepTime: z.number().int().optional().nullable(),
   cookTime: z.number().int().optional().nullable(),
   tags: z.union([ z.lazy(() => NullableJsonNullValueInputSchema),InputJsonValueSchema ]).optional(),
+  thumbnailUrl: z.string().optional().nullable()
 }).strict();
 
 export const ElaboratedRecipeUpdateManyMutationInputSchema: z.ZodType<Prisma.ElaboratedRecipeUpdateManyMutationInput> = z.object({
@@ -1506,6 +1517,7 @@ export const ElaboratedRecipeUpdateManyMutationInputSchema: z.ZodType<Prisma.Ela
   prepTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   cookTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   tags: z.union([ z.lazy(() => NullableJsonNullValueInputSchema),InputJsonValueSchema ]).optional(),
+  thumbnailUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const ElaboratedRecipeUncheckedUpdateManyInputSchema: z.ZodType<Prisma.ElaboratedRecipeUncheckedUpdateManyInput> = z.object({
@@ -1522,6 +1534,7 @@ export const ElaboratedRecipeUncheckedUpdateManyInputSchema: z.ZodType<Prisma.El
   prepTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   cookTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   tags: z.union([ z.lazy(() => NullableJsonNullValueInputSchema),InputJsonValueSchema ]).optional(),
+  thumbnailUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const StringFilterSchema: z.ZodType<Prisma.StringFilter> = z.object({
@@ -2067,7 +2080,8 @@ export const ElaboratedRecipeCountOrderByAggregateInputSchema: z.ZodType<Prisma.
   servings: z.lazy(() => SortOrderSchema).optional(),
   prepTime: z.lazy(() => SortOrderSchema).optional(),
   cookTime: z.lazy(() => SortOrderSchema).optional(),
-  tags: z.lazy(() => SortOrderSchema).optional()
+  tags: z.lazy(() => SortOrderSchema).optional(),
+  thumbnailUrl: z.lazy(() => SortOrderSchema).optional()
 }).strict();
 
 export const ElaboratedRecipeAvgOrderByAggregateInputSchema: z.ZodType<Prisma.ElaboratedRecipeAvgOrderByAggregateInput> = z.object({
@@ -2086,7 +2100,8 @@ export const ElaboratedRecipeMaxOrderByAggregateInputSchema: z.ZodType<Prisma.El
   dateCreated: z.lazy(() => SortOrderSchema).optional(),
   servings: z.lazy(() => SortOrderSchema).optional(),
   prepTime: z.lazy(() => SortOrderSchema).optional(),
-  cookTime: z.lazy(() => SortOrderSchema).optional()
+  cookTime: z.lazy(() => SortOrderSchema).optional(),
+  thumbnailUrl: z.lazy(() => SortOrderSchema).optional()
 }).strict();
 
 export const ElaboratedRecipeMinOrderByAggregateInputSchema: z.ZodType<Prisma.ElaboratedRecipeMinOrderByAggregateInput> = z.object({
@@ -2099,7 +2114,8 @@ export const ElaboratedRecipeMinOrderByAggregateInputSchema: z.ZodType<Prisma.El
   dateCreated: z.lazy(() => SortOrderSchema).optional(),
   servings: z.lazy(() => SortOrderSchema).optional(),
   prepTime: z.lazy(() => SortOrderSchema).optional(),
-  cookTime: z.lazy(() => SortOrderSchema).optional()
+  cookTime: z.lazy(() => SortOrderSchema).optional(),
+  thumbnailUrl: z.lazy(() => SortOrderSchema).optional()
 }).strict();
 
 export const ElaboratedRecipeSumOrderByAggregateInputSchema: z.ZodType<Prisma.ElaboratedRecipeSumOrderByAggregateInput> = z.object({
@@ -2732,6 +2748,7 @@ export const ElaboratedRecipeCreateWithoutUserInputSchema: z.ZodType<Prisma.Elab
   prepTime: z.number().int().optional().nullable(),
   cookTime: z.number().int().optional().nullable(),
   tags: z.union([ z.lazy(() => NullableJsonNullValueInputSchema),InputJsonValueSchema ]).optional(),
+  thumbnailUrl: z.string().optional().nullable()
 }).strict();
 
 export const ElaboratedRecipeUncheckedCreateWithoutUserInputSchema: z.ZodType<Prisma.ElaboratedRecipeUncheckedCreateWithoutUserInput> = z.object({
@@ -2747,6 +2764,7 @@ export const ElaboratedRecipeUncheckedCreateWithoutUserInputSchema: z.ZodType<Pr
   prepTime: z.number().int().optional().nullable(),
   cookTime: z.number().int().optional().nullable(),
   tags: z.union([ z.lazy(() => NullableJsonNullValueInputSchema),InputJsonValueSchema ]).optional(),
+  thumbnailUrl: z.string().optional().nullable()
 }).strict();
 
 export const ElaboratedRecipeCreateOrConnectWithoutUserInputSchema: z.ZodType<Prisma.ElaboratedRecipeCreateOrConnectWithoutUserInput> = z.object({
@@ -2848,7 +2866,8 @@ export const ElaboratedRecipeScalarWhereInputSchema: z.ZodType<Prisma.Elaborated
   servings: z.union([ z.lazy(() => IntNullableFilterSchema),z.number() ]).optional().nullable(),
   prepTime: z.union([ z.lazy(() => IntNullableFilterSchema),z.number() ]).optional().nullable(),
   cookTime: z.union([ z.lazy(() => IntNullableFilterSchema),z.number() ]).optional().nullable(),
-  tags: z.lazy(() => JsonNullableFilterSchema).optional()
+  tags: z.lazy(() => JsonNullableFilterSchema).optional(),
+  thumbnailUrl: z.union([ z.lazy(() => StringNullableFilterSchema),z.string() ]).optional().nullable(),
 }).strict();
 
 export const UserCreateWithoutFilesInputSchema: z.ZodType<Prisma.UserCreateWithoutFilesInput> = z.object({
@@ -3235,6 +3254,7 @@ export const ElaboratedRecipeCreateManyUserInputSchema: z.ZodType<Prisma.Elabora
   prepTime: z.number().int().optional().nullable(),
   cookTime: z.number().int().optional().nullable(),
   tags: z.union([ z.lazy(() => NullableJsonNullValueInputSchema),InputJsonValueSchema ]).optional(),
+  thumbnailUrl: z.string().optional().nullable()
 }).strict();
 
 export const ContactFormMessageUpdateWithoutUserInputSchema: z.ZodType<Prisma.ContactFormMessageUpdateWithoutUserInput> = z.object({
@@ -3301,6 +3321,7 @@ export const ElaboratedRecipeUpdateWithoutUserInputSchema: z.ZodType<Prisma.Elab
   prepTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   cookTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   tags: z.union([ z.lazy(() => NullableJsonNullValueInputSchema),InputJsonValueSchema ]).optional(),
+  thumbnailUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const ElaboratedRecipeUncheckedUpdateWithoutUserInputSchema: z.ZodType<Prisma.ElaboratedRecipeUncheckedUpdateWithoutUserInput> = z.object({
@@ -3316,6 +3337,7 @@ export const ElaboratedRecipeUncheckedUpdateWithoutUserInputSchema: z.ZodType<Pr
   prepTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   cookTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   tags: z.union([ z.lazy(() => NullableJsonNullValueInputSchema),InputJsonValueSchema ]).optional(),
+  thumbnailUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const ElaboratedRecipeUncheckedUpdateManyWithoutUserInputSchema: z.ZodType<Prisma.ElaboratedRecipeUncheckedUpdateManyWithoutUserInput> = z.object({
@@ -3331,6 +3353,7 @@ export const ElaboratedRecipeUncheckedUpdateManyWithoutUserInputSchema: z.ZodTyp
   prepTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   cookTime: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   tags: z.union([ z.lazy(() => NullableJsonNullValueInputSchema),InputJsonValueSchema ]).optional(),
+  thumbnailUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const PageViewSourceCreateManyDailyStatsInputSchema: z.ZodType<Prisma.PageViewSourceCreateManyDailyStatsInput> = z.object({

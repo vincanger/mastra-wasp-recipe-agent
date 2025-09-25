@@ -1,3 +1,3 @@
 export enum WorkflowId {
-  ElaborateRecipesWorkflow = "elaborateRecipesWorkflow",
+  GenerateCompleteRecipes = 'generateCompleteRecipes',
 }

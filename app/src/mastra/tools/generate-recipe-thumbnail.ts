@@ -1,7 +1,8 @@
 import type { ImageGenerateParams } from "openai/resources/images.mjs";
 import type { Tool } from "@mastra/core/tools";
+import type { ElaboratedRecipe } from "../schemas/recipe-schema";
 
-import { ElaboratedRecipe, elaboratedRecipeSchema} from "../workflow/elaborate-recipes";
+import { elaboratedRecipeSchema } from "../schemas/recipe-schema";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import OpenAI from "openai";
@@ -22,6 +23,8 @@ const outputSchema = z.object({
   success: z.boolean().describe("Whether the thumbnail was generated successfully"),
   error: z.string().optional().describe("Error message if generation failed"),
 });
+
+export type GenerateRecipeThumbnailOutput = z.infer<typeof outputSchema>;
 
 // Export a simple function for internal use if its not being called from an agent
 export async function generateThumbnailForRecipe(recipe: ElaboratedRecipe, userId: string) {

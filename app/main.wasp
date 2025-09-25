@@ -183,6 +183,24 @@ job cleanupUnfavoritedRecipes {
   },
   entities: [ElaboratedRecipe]
 }
+
+route StreamingTestPageRoute { path: "/streaming-test", to: StreamingTestPage }
+page StreamingTestPage {
+  component: import { StreamingTestPage } from "@src/recipes/streaming/StreamChatPage",
+  authRequired: true
+}
+
+api streamChatWithRecipeAgent {
+  fn: import { streamChatWithRecipeAgent } from "@src/recipes/streaming/api",
+  entities: [ElaboratedRecipe],
+  httpRoute: (POST, "/api/recipes/stream-chat"),
+  auth: true
+}
+
+apiNamespace defaultMiddlewareForStreamingText {
+  path: "/api/recipes/stream-chat",
+  middlewareConfigFn: import { getMiddlewareConfig } from "@src/recipes/streaming/api",
+}
 // #endregion Recipes Agent with Mastra
 
 //#region Payment
