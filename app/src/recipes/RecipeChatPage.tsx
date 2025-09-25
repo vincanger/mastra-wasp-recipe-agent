@@ -2,7 +2,7 @@ import type { AuthUser } from 'wasp/auth';
 import type { ElaboratedRecipe } from 'wasp/entities';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { chatWithRecipeAgent, getUserRecipes, useQuery } from 'wasp/client/operations';
+import { getUserRecipes, useQuery } from 'wasp/client/operations';
 
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -14,8 +14,11 @@ import { RecipeDetailView } from './components/RecipeDetailView';
 
 import { Send, Menu, GripVertical, ChevronUp, ChevronDown, MessageCircle, ChefHat } from 'lucide-react';
 import { useToast } from '../components/ui/hooks/use-toast';
+import { useTextStream } from './streaming/useTextStream';
+import { v4 as uuidv4 } from 'uuid';
 
 export type RecipeMessage = {
+  id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
 };
@@ -33,11 +36,31 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
   const { toast } = useToast();
 
   // Use Wasp's useQuery to fetch user recipes, filtered by displayRecipeIds when available
-  const { data: recipes = [], isLoading: recipesLoading } = useQuery(getUserRecipes, {
+  const { data: recipes = [], isLoading: isRecipesLoading, refetch: refetchRecipes } = useQuery(getUserRecipes, {
     savedOnly: false,
     favoritesOnly: false,
     recipeIds: displayRecipeIds,
   });
+
+  const { response, sendMessage, finishReason } = useTextStream({ path: '/api/recipes/stream-chat', metadata: { threadId: 'recipe-session-1' }, setIsLoading });
+
+  useEffect(() => {
+    if (response.content.trim().length > 0) {
+      setMessages((prevMessages) => {
+        const currentMessage = prevMessages.find((message) => message.id === response.id);
+        if (currentMessage) {
+          return prevMessages.map((message) => (message.id === response.id ? response : message));
+        }
+        return [...prevMessages, { id: response.id, role: 'assistant', content: response.content }];
+      });
+    }
+  }, [response]);
+
+  useEffect(() => {
+    if (finishReason === 'stop') {
+      refetchRecipes();
+    }
+  }, [finishReason]);
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -45,10 +68,8 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
   // Auto-scroll chat to bottom when new messages arrive
   useEffect(() => {
     if (chatScrollRef.current) {
-      // Find the scrollable viewport within the ScrollArea component
       const viewport = chatScrollRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement;
       if (viewport) {
-        // Use smooth scrolling for a better user experience
         viewport.scrollTo({
           top: viewport.scrollHeight,
           behavior: 'smooth',
@@ -80,7 +101,7 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
 
   // Toggle chat collapsed state
   const toggleChatCollapsed = useCallback(() => {
-    setIsChatCollapsed(prev => !prev);
+    setIsChatCollapsed((prev) => !prev);
   }, []);
 
   // Handle dragging for resizable divider
@@ -130,53 +151,34 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
     const userMessage = input.trim();
 
     // Add user message to UI
-    setMessages((prevMessages) => [...prevMessages, { role: 'user', content: userMessage }]);
+    setMessages((prevMessages) => [...prevMessages, { id: uuidv4(), role: 'user', content: userMessage }]);
 
     setInput('');
     setIsLoading(true);
 
-    try {
-      const response = await chatWithRecipeAgent({
-        message: userMessage,
-        resourceId: user.id,
-        threadId: 'recipe-session-1', // Use consistent thread ID for this session
-      });
+    sendMessage({ message: userMessage });
 
-      setMessages((prevMessages) => [...prevMessages, { role: 'assistant', content: response.text }]);
+    // if (response.displayRecipeIds.length > 0) {
+    //   setDisplayRecipeIds(response.displayRecipeIds);
+    // }
 
-      if (response.displayRecipeIds.length > 0) {
-        setDisplayRecipeIds(response.displayRecipeIds);
-      }
+    // if (response.toolIdsCalled.length > 0) {
+    //   toast({
+    //     title: 'Tools Called',
+    //     description: 'The following tools were called: ' + response.toolIdsCalled.join(', '),
+    //   });
+    // }
 
-      if (response.toolIdsCalled.length > 0) {
-        toast({
-          title: 'Tools Called',
-          description: 'The following tools were called: ' + response.toolIdsCalled.join(', '),
-        });
-      }
+    // if (response.numRecipesCreated > 0) {
+    //   toast({
+    //     title: 'Recipes Created',
+    //     description: `${response.numRecipesCreated} recipes were created and added to your collection.`,
+    //   });
+    // }
 
-      if (response.numRecipesCreated > 0) {
-        toast({
-          title: 'Recipes Created',
-          description: `${response.numRecipesCreated} recipes were created and added to your collection.`,
-        });
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        {
-          role: 'assistant',
-          content: 'I apologize, but I encountered an error processing your request. Please try again.',
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
-      // Focus the input field after message is sent
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
-    }
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
   };
 
   const Sidebar = () => (
@@ -305,14 +307,14 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
               <p>Select a recipe from the sidebar to view details</p>
             </div>
           )}
-          
+
           {/* Floating Toggle Button */}
           {selectedRecipe && (
             <div className='absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20'>
               <Button
                 onClick={toggleChatCollapsed}
-                variant="default"
-                size="sm"
+                variant='default'
+                size='sm'
                 className='bg-primary/95 hover:bg-primary text-primary-foreground border shadow-lg hover:shadow-xl transition-all duration-200 rounded-full px-4 py-2'
               >
                 {isChatCollapsed ? (
