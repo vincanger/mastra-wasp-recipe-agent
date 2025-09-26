@@ -8,12 +8,12 @@ import { mastra } from '../../mastra';
 import { setUserIdForToolUse, ToolId } from '../../mastra/tools/ids';
 import { ToolResultExtractor } from '../../mastra/tools/responses';
 import { ElaboratedRecipe } from '../../mastra/schemas/recipe-schema';
+import { ChunkType } from '@mastra/core';
 
 // Custom API endpoint that returns a streaming text.
 export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, res, context) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Transfer-Encoding', 'chunked');
-  console.log('req.body', req.body)
   if (!context.user) {
     throw new HttpError(401, 'Not authorized');
   }
@@ -33,8 +33,13 @@ export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, 
       },
     });
 
-    for await (const chunk of streamResult.textStream) {
-      res.write(chunk);
+    for await (const chunk of streamResult.fullStream) {
+      if (chunk.type === 'tool-result' && chunk.payload.toolName === ToolId.RunGenerateCompleteRecipes) {
+        res.write(`Your recipes are ready!`);
+        break;
+      } else if (chunk.type === 'text-delta') {
+        res.write(chunk.payload.text);
+      }
     }
 
     const toolResults = await streamResult.toolResults;
@@ -74,6 +79,8 @@ async function saveAndReturnRecipeData({ toolResultExtractor, context }: { toolR
   const savedRecipeIds: string[] = [];
   const elaboratedRecipeResults = toolResultExtractor.getResults(ToolId.RunGenerateCompleteRecipes);
   const recipes = flattenElaboratedRecipesArray(elaboratedRecipeResults);
+
+  console.log('recipes within api saveAndReturnRecipeData: ', recipes);
 
   for (const recipe of recipes) {
     const savedRecipe = await context.entities.ElaboratedRecipe.create({
