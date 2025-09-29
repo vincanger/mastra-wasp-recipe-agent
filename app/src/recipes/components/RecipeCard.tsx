@@ -1,16 +1,17 @@
+import type { Recipe } from 'wasp/entities';
+
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
-import type { ElaboratedRecipe } from 'wasp/entities';
 import { Heart } from 'lucide-react';
 import { toggleFavoriteRecipe } from 'wasp/client/operations';
 import { useState, useCallback, useMemo, memo } from 'react';
 import { RecipeThumbnail } from './RecipeThumbnail';
 
 interface RecipeCardProps {
-  recipe: ElaboratedRecipe;
+  recipe: Recipe;
   isSelected?: boolean;
   onClick: () => void;
-  onRecipeUpdated?: (updatedRecipe: ElaboratedRecipe) => void;
+  onRecipeUpdated?: (updatedRecipe: Recipe) => void;
 }
 
 export const RecipeCard = memo(function RecipeCard({ recipe, isSelected, onClick, onRecipeUpdated }: RecipeCardProps) {

@@ -1,13 +1,67 @@
-import { Agent } from "@mastra/core/agent";
-import { Memory } from "@mastra/memory";
-import { LibSQLStore, LibSQLVector } from "@mastra/libsql";
-import { openai } from "@ai-sdk/openai";
-import { getCurrentDate } from "../tools/get-current-date";
-import { runGenerateCompleteRecipes } from "../tools/run-generate-complete-recipes";
-import { getUserRecipes } from "../tools/get-user-recipes";
-import { AgentId } from "./ids";
+import { Agent } from '@mastra/core/agent';
+import { Memory } from '@mastra/memory';
+import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
+import { openai } from '@ai-sdk/openai';
+import { getCurrentDate } from '../tools/get-current-date';
+import { generateCompleteRecipes } from '../workflow/generate-complete-recipes';
+import { getUserRecipes } from '../tools/get-user-recipes';
+import { AgentId } from './ids';
 
-const workingMemoryTemplate = `
+export const recipeOrchestrator = new Agent({
+  id: AgentId.RecipeOrchestrator,
+  name: AgentId.RecipeOrchestrator,
+  instructions: `You are a friendly culinary assistant that helps the user brainstorm recipe ideas and chat about cooking.
+    
+    You have access to the user's personal recipe collection and can:
+    - Search through their saved and favorite recipes
+    - Help them find recipes they've previously saved
+    - Generate new detailed recipes when requested
+
+    Update your working memory  when the user provides:
+    - Total Prep & CookTime Preferences
+    - Ingredients Preferences
+    - Difficulty Preferences
+    - Style Preferences
+    - Planning Topic
+    - Ingredients on hand
+    - Ingredients to buy
+    
+    When the user asks about their existing recipes, use the 'getUserRecipes' tool to search their collection. 
+    The user ID is automatically provided - you don't need to specify it.
+    When the user asks for full/detailed instructions for new recipe ideas, call the 'runGenerateFullRecipesWorkflow' tool with an array of titles.
+    
+    Always be helpful and provide cooking tips, substitutions, and meal planning advice.
+    DO NOT return full recipes, only provide recipe ideas and summaries of instructions.
+    `,
+  model: openai('gpt-4o-mini'),
+  tools: {
+    getCurrentDate,
+    getUserRecipes,
+  },
+  workflows: {
+    generateCompleteRecipes,
+  },
+  memory: new Memory({
+    storage: new LibSQLStore({
+      url: 'file:../memory.db',
+    }),
+    vector: new LibSQLVector({
+      connectionUrl: 'file:../memory.db',
+    }),
+    embedder: openai.embedding('text-embedding-3-small'),
+    options: {
+      semanticRecall: true,
+      lastMessages: 12, // default is 10
+      workingMemory: {
+        enabled: true,
+        template: returnWorkingMemoryTemplate(),
+      },
+    },
+  }),
+});
+
+function returnWorkingMemoryTemplate() {
+  return `
 ## Meal Preferences
 
 - Total Prep & CookTime Preferences: [e.g., < 30 minutes, > 30 minutes]
@@ -39,54 +93,4 @@ const workingMemoryTemplate = `
   - Recipe 2
   - Recipe 3
 `;
-
-export const recipeOrchestrator = new Agent({
-  id: AgentId.RecipeOrchestrator,
-  name: AgentId.RecipeOrchestrator,
-  instructions: `You are a friendly culinary assistant that helps the user brainstorm recipe ideas and chat about cooking.
-    
-    You have access to the user's personal recipe collection and can:
-    - Search through their saved and favorite recipes
-    - Help them find recipes they've previously saved
-    - Generate new detailed recipes when requested
-
-    Update your working memory  when the user provides:
-    - Total Prep & CookTime Preferences
-    - Ingredients Preferences
-    - Difficulty Preferences
-    - Style Preferences
-    - Planning Topic
-    - Ingredients on hand
-    - Ingredients to buy
-    
-    When the user asks about their existing recipes, use the 'getUserRecipes' tool to search their collection. 
-    The user ID is automatically provided - you don't need to specify it.
-    When the user asks for full/detailed instructions for new recipe ideas, call the 'runGenerateFullRecipesWorkflow' tool with an array of titles.
-    
-    Always be helpful and provide cooking tips, substitutions, and meal planning advice.
-    DO NOT return full recipes, only provide recipe ideas and summaries of instructions.
-    `,
-  model: openai('gpt-4o-mini'),
-  tools: {
-    getCurrentDate,
-    runGenerateCompleteRecipes,
-    getUserRecipes,
-  },
-  memory: new Memory({
-    storage: new LibSQLStore({
-      url: 'file:../memory.db',
-    }),
-    vector: new LibSQLVector({
-      connectionUrl: 'file:../memory.db',
-    }),
-    embedder: openai.embedding('text-embedding-3-small'),
-    options: {
-      semanticRecall: true,
-      lastMessages: 12, // default is 10
-      workingMemory: {
-        enabled: true,
-        template: workingMemoryTemplate,
-      },
-    },
-  }),
-});
+}

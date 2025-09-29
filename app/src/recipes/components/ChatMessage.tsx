@@ -11,7 +11,6 @@ interface ChatMessageProps {
 
 export function ChatMessage({ message, userName = 'You' }: ChatMessageProps) {
   const isUser = message.role === 'user';
-
   return (
     <div className={cn('flex gap-3 mb-4', isUser ? 'flex-row-reverse' : 'flex-row')}>
       <Avatar className='flex-shrink-0 h-8 w-8'>
@@ -26,7 +25,9 @@ export function ChatMessage({ message, userName = 'You' }: ChatMessageProps) {
           isUser ? 'bg-primary/70 text-primary-foreground ml-auto' : 'bg-secondary/70 text-secondary-foreground'
         )}
       >
-        <ReactMarkdown>{message.content}</ReactMarkdown>
+        <p className={cn('text-sm', message.toolCallStatus && message.toolCallStatus !== 'finished' ? 'animate-pulse' : '')}>
+          <ReactMarkdown>{message.content}</ReactMarkdown>
+        </p>
       </div>
     </div>
   );

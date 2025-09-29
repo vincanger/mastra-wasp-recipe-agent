@@ -2,24 +2,39 @@ import type {
   ToggleFavoriteRecipe, 
   GetUserRecipes, 
   DeleteRecipe, 
+  SaveRecipes,
 } from 'wasp/server/operations';
 import type { CleanupUnfavoritedRecipes } from 'wasp/server/jobs';
-import type { ElaboratedRecipe } from 'wasp/entities';
+import type { Recipe } from 'wasp/entities';
+import type { ElaboratedRecipe as ElaboratedRecipeType } from '../mastra/schemas/recipe-schema';
+
 import { HttpError } from 'wasp/server';
 
+export const saveRecipes = (async (args, context) => {
+  if (!context.user) {
+    throw new HttpError(401, 'Not authorized');
+  }
+
+ return await context.entities.Recipe.createManyAndReturn({
+  data: args.map((recipe) => ({
+    ...recipe,
+    userId: context.user!.id,
+  })),
+ });
+}) satisfies SaveRecipes<ElaboratedRecipeType[]>;
 
 type ToggleFavoriteInput = {
   recipeId: string;
 };
 
-export const toggleFavoriteRecipe: ToggleFavoriteRecipe<ToggleFavoriteInput, ElaboratedRecipe> = async (args, context) => {
+export const toggleFavoriteRecipe: ToggleFavoriteRecipe<ToggleFavoriteInput, Recipe> = async (args, context) => {
   if (!context.user) {
     throw new HttpError(401, 'Not authorized');
   }
 
   try {
     // First check if recipe exists and belongs to user
-    const recipe = await context.entities.ElaboratedRecipe.findFirst({
+    const recipe = await context.entities.Recipe.findFirst({
       where: {
         id: args.recipeId,
         userId: context.user.id,
@@ -30,7 +45,7 @@ export const toggleFavoriteRecipe: ToggleFavoriteRecipe<ToggleFavoriteInput, Ela
       throw new HttpError(404, 'Recipe not found');
     }
 
-    return await context.entities.ElaboratedRecipe.update({
+    return await context.entities.Recipe.update({
       where: { id: args.recipeId },
       data: {
         isFavorite: !recipe.isFavorite,
@@ -50,7 +65,7 @@ type GetUserRecipesInput = {
   recipeIds?: string[]; // Optional array of specific recipe IDs to filter by
 };
 
-export const getUserRecipes: GetUserRecipes<GetUserRecipesInput, ElaboratedRecipe[]> = async (args, context) => {
+export const getUserRecipes: GetUserRecipes<GetUserRecipesInput, Recipe[]> = async (args, context) => {
   if (!context.user) {
     throw new HttpError(401, 'Not authorized');
   }
@@ -71,7 +86,7 @@ export const getUserRecipes: GetUserRecipes<GetUserRecipesInput, ElaboratedRecip
       };
     }
 
-    return await context.entities.ElaboratedRecipe.findMany({
+    return await context.entities.Recipe.findMany({
       where: whereConditions,
       orderBy: {
         createdAt: 'desc',
@@ -94,7 +109,7 @@ export const deleteRecipe: DeleteRecipe<DeleteRecipeInput, { success: boolean }>
 
   try {
     // Check if recipe exists and belongs to user
-    const recipe = await context.entities.ElaboratedRecipe.findFirst({
+    const recipe = await context.entities.Recipe.findFirst({
       where: {
         id: args.recipeId,
         userId: context.user.id,
@@ -105,7 +120,7 @@ export const deleteRecipe: DeleteRecipe<DeleteRecipeInput, { success: boolean }>
       throw new HttpError(404, 'Recipe not found');
     }
 
-    await context.entities.ElaboratedRecipe.delete({
+    await context.entities.Recipe.delete({
       where: { id: args.recipeId },
     });
 
@@ -126,7 +141,7 @@ export const cleanupUnfavoritedRecipes: CleanupUnfavoritedRecipes<never, { delet
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const result = await context.entities.ElaboratedRecipe.deleteMany({
+    const result = await context.entities.Recipe.deleteMany({
       where: {
         isFavorite: false,
         createdAt: {

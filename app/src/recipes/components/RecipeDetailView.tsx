@@ -1,18 +1,19 @@
+import type { Recipe } from 'wasp/entities';
+
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
-import type { ElaboratedRecipe } from 'wasp/entities';
 import { toggleFavoriteRecipe } from 'wasp/client/operations';
 import { Clock, Users, ChefHat, Calendar, Heart, Loader2, Expand } from 'lucide-react';
 import { useState } from 'react';
 import { RecipeThumbnail } from './RecipeThumbnail';
 
 interface RecipeDetailViewProps {
-  recipe: ElaboratedRecipe;
+  recipe: Recipe;
   onViewFullRecipe?: () => void;
   onViewCalendar?: () => void;
-  onRecipeUpdated?: (updatedRecipe: ElaboratedRecipe) => void;
+  onRecipeUpdated?: (updatedRecipe: Recipe) => void;
 }
 
 export function RecipeDetailView({ recipe, onViewFullRecipe, onViewCalendar, onRecipeUpdated }: RecipeDetailViewProps) {

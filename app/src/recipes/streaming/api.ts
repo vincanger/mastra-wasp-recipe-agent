@@ -1,14 +1,37 @@
 import type { StreamChatWithRecipeAgent } from 'wasp/server/api';
-import type { GenerateCompleteRecipesResponse, AnyToolResponse } from '../../mastra/tools/responses';
 import type { MiddlewareConfigFn } from 'wasp/server';
 
 import { HttpError } from 'wasp/server';
 import { AgentId } from '../../mastra/agents/ids';
 import { mastra } from '../../mastra';
 import { setUserIdForToolUse, ToolId } from '../../mastra/tools/ids';
-import { ToolResultExtractor } from '../../mastra/tools/responses';
-import { ElaboratedRecipe } from '../../mastra/schemas/recipe-schema';
-import { ChunkType } from '@mastra/core';
+import { WorkflowId, WorkflowStepId } from '../../mastra/workflow/ids';
+
+export type ToolOutputChunk = {
+  type: 'tool-output';
+  workflowStepId: WorkflowStepId;
+};
+
+export type ToolCallStartChunk = {
+  type: 'tool-call-input-streaming-start';
+  workflowId?: WorkflowId;
+  toolId?: ToolId;
+};
+
+export type ToolResultChunk = {
+  type: 'tool-result';
+  workflowId?: WorkflowId;
+  toolId?: ToolId;
+  recipeIds?: string[];
+};
+
+export type TextDeltaChunk = {
+  type: 'text-delta';
+  text: string;
+};
+
+// Union type that TypeScript can discriminate
+export type TextStreamChunk = ToolOutputChunk | ToolCallStartChunk | ToolResultChunk | TextDeltaChunk;
 
 // Custom API endpoint that returns a streaming text.
 export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, res, context) => {
@@ -20,6 +43,7 @@ export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, 
 
   const { messages } = req.body;
   for (const message of messages) {
+    console.log('message: ', message);
     const { parts, metadata } = message;
     const { threadId } = metadata;
     setUserIdForToolUse(context.user.id);
@@ -34,74 +58,79 @@ export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, 
     });
 
     for await (const chunk of streamResult.fullStream) {
-      if (chunk.type === 'tool-result' && chunk.payload.toolName === ToolId.RunGenerateCompleteRecipes) {
-        res.write(`Your recipes are ready!`);
-        break;
-      } else if (chunk.type === 'text-delta') {
-        res.write(chunk.payload.text);
+      if (chunk.type === 'tool-output') {
+        // {
+        // type: 'workflow-step-start',
+        //    runId: '7471b3c0-ea73-4eb1-bbc2-4a2d1405f39b',
+        //    from: 'WORKFLOW',
+        //    payload: {
+        //     stepName: 'generateElaboratedRecipesStep',
+        //     id: 'generateElaboratedRecipesStep',
+        //     stepCallId: '2d0e62a4-2c73-4266-972e-e30177254c71',
+        //     payload: { titles: [Array] },
+        //     startedAt: 1759130424815,
+        //     status: 'running'
+        //   }
+        // }
+        if (chunk.payload.output.type === 'workflow-step-start') {
+          const textStreamChunk: TextStreamChunk = {
+            type: chunk.type,
+            workflowStepId: chunk.payload.output.payload.id,
+          };
+          res.write(JSON.stringify(textStreamChunk));
+        }
       }
-    }
-
-    const toolResults = await streamResult.toolResults;
-    if (toolResults.length > 0) {
-      const toolResultExtractor = new ToolResultExtractor(toolResults as AnyToolResponse[]);
-      if (toolResultExtractor.hasResults(ToolId.RunGenerateCompleteRecipes)) {
-        await saveAndReturnRecipeData({
-          toolResultExtractor,
-          context,
-        });
+      if (chunk.type === 'tool-call-input-streaming-start') {
+        if (chunk.payload.toolName === WorkflowId.GenerateCompleteRecipes) {
+          const textStreamChunk: TextStreamChunk = {
+            type: chunk.type,
+            workflowId: chunk.payload.toolName,
+          };
+          res.write(JSON.stringify(textStreamChunk));
+        } else if (chunk.payload.toolName === ToolId.GetUserRecipes) {
+          const textStreamChunk: TextStreamChunk = {
+            type: chunk.type,
+            toolId: chunk.payload.toolName,
+          };
+          res.write(JSON.stringify(textStreamChunk));
+        }
+      }
+      if (chunk.type === 'tool-result') {
+        if (chunk.payload.toolName === WorkflowId.GenerateCompleteRecipes) {
+          const textStreamChunk: TextStreamChunk = {
+            type: chunk.type,
+            workflowId: chunk.payload.toolName,
+          };
+          res.write(JSON.stringify(textStreamChunk));
+          // Our workflow result sends an array of completed recipes,
+          // which we save to the db, so we can end the stream
+          // and display the recipes in the detailed recipe view
+          // so we dont also stream the entire recipe text.
+          res.end();
+          return;
+        } else if (chunk.payload.toolName === ToolId.GetUserRecipes) {
+          const textStreamChunk: TextStreamChunk = {
+            type: chunk.type,
+            toolId: chunk.payload.toolName,
+            recipeIds: chunk.payload.result.recipeIds,
+          };
+          res.write(JSON.stringify(textStreamChunk));
+          res.end();
+          return;
+        }
+      }
+      if (chunk.type === 'text-delta') {
+        const textStreamChunk: TextStreamChunk = {
+          type: chunk.type,
+          text: chunk.payload.text,
+        };
+        res.write(JSON.stringify(textStreamChunk));
       }
     }
   }
 
   res.end();
 };
-
-const flattenElaboratedRecipesArray = (recipeToolResults: GenerateCompleteRecipesResponse[]): ElaboratedRecipe[] => {
-  const recipes: ElaboratedRecipe[] = [];
-
-  for (const toolResult of recipeToolResults) {
-    const payload = toolResult.payload;
-    payload.result.recipes.forEach((recipe) => {
-      recipes.push(recipe);
-    });
-  }
-
-  return recipes;
-};
-
-async function saveAndReturnRecipeData({ toolResultExtractor, context }: { toolResultExtractor: ToolResultExtractor; context: Parameters<StreamChatWithRecipeAgent>[2] }) {
-  if (!context.user) {
-    throw new HttpError(401, 'Not authorized');
-  }
-
-  let recipesCreated = 0;
-  const savedRecipeIds: string[] = [];
-  const elaboratedRecipeResults = toolResultExtractor.getResults(ToolId.RunGenerateCompleteRecipes);
-  const recipes = flattenElaboratedRecipesArray(elaboratedRecipeResults);
-
-  console.log('recipes within api saveAndReturnRecipeData: ', recipes);
-
-  for (const recipe of recipes) {
-    const savedRecipe = await context.entities.ElaboratedRecipe.create({
-      data: {
-        userId: context.user.id,
-        title: recipe.title,
-        ingredients: recipe.ingredients,
-        instructions: recipe.instructions,
-        dateCreated: recipe.dateCreated,
-        thumbnailUrl: recipe.thumbnailUrl ?? undefined,
-        isFavorite: false,
-      },
-    });
-    savedRecipeIds.push(savedRecipe.id);
-    recipesCreated++;
-  }
-
-  console.log(`Persisted ${recipesCreated} recipes to database for user ${context.user.id}`);
-
-  return { recipesCreated, recipeIds: savedRecipeIds };
-}
 
 // Returning the default config.
 export const getMiddlewareConfig: MiddlewareConfigFn = (config) => {

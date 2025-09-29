@@ -7,11 +7,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-generator zod {
-  provider = "npx zod-prisma-types"
-  output   = "./src/lib/zod"
-}
-
 model User {
   id                        String          @id @default(uuid())
   createdAt                 DateTime        @default(now())
@@ -29,7 +24,7 @@ model User {
 
   contactFormMessages       ContactFormMessage[]
   files                     File[]
-  elaboratedRecipes         ElaboratedRecipe[]
+  recipes         Recipe[]
 }
 
 model File {
@@ -92,7 +87,7 @@ model ContactFormMessage {
   repliedAt                 DateTime?
 }
 
-model ElaboratedRecipe {
+model Recipe {
   id                        String          @id @default(uuid())
   createdAt                 DateTime        @default(now())
   updatedAt                 DateTime        @updatedAt

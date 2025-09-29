@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, memo } from 'react';
 import { ImageOff } from 'lucide-react';
 
 interface RecipeThumbnailProps {

@@ -68,7 +68,7 @@ app OpenSaaS {
       // }
     },
     onAuthFailedRedirectTo: "/login",
-    onAuthSucceededRedirectTo: "/demo-app",
+    onAuthSucceededRedirectTo: "/recipes",
   },
 
   db: {
@@ -153,24 +153,24 @@ page RecipeChatPage {
   component: import { RecipeChatPage } from "@src/recipes/RecipeChatPage.tsx"
 }
 
-action chatWithRecipeAgent {
-  fn: import { chatWithRecipeAgent } from "@src/recipes/chat-operations",
-  entities: [ElaboratedRecipe]
+action saveRecipes {
+  fn: import { saveRecipes } from "@src/recipes/recipe-operations",
+  entities: [Recipe]
 }
 
 action toggleFavoriteRecipe {
   fn: import { toggleFavoriteRecipe } from "@src/recipes/recipe-operations",
-  entities: [ElaboratedRecipe]
+  entities: [Recipe]
 }
 
 action deleteRecipe {
   fn: import { deleteRecipe } from "@src/recipes/recipe-operations",
-  entities: [ElaboratedRecipe]
+  entities: [Recipe]
 }
 
 query getUserRecipes {
   fn: import { getUserRecipes } from "@src/recipes/recipe-operations",
-  entities: [ElaboratedRecipe]
+  entities: [Recipe]
 }
 
 job cleanupUnfavoritedRecipes {
@@ -181,14 +181,14 @@ job cleanupUnfavoritedRecipes {
   schedule: {
     cron: "0 2 * * 0" // Every Sunday at 2 AM
   },
-  entities: [ElaboratedRecipe]
+  entities: [Recipe]
 }
 
 api streamChatWithRecipeAgent {
   fn: import { streamChatWithRecipeAgent } from "@src/recipes/streaming/api",
-  entities: [ElaboratedRecipe],
+  entities: [Recipe],
   httpRoute: (POST, "/api/recipes/stream-chat"),
-  auth: true
+  auth: true,
 }
 
 apiNamespace defaultMiddlewareForStreamingText {

@@ -1,9 +1,8 @@
 import type { AuthUser } from 'wasp/auth';
-import type { ElaboratedRecipe } from 'wasp/entities';
+import type { Recipe } from 'wasp/entities';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { getUserRecipes, useQuery } from 'wasp/client/operations';
-
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { ScrollArea } from '../components/ui/scroll-area';
@@ -12,8 +11,7 @@ import { RecipeCard } from './components/RecipeCard';
 import { ChatMessage } from './components/ChatMessage';
 import { RecipeDetailView } from './components/RecipeDetailView';
 
-import { Send, Menu, GripVertical, ChevronUp, ChevronDown, MessageCircle, ChefHat } from 'lucide-react';
-import { useToast } from '../components/ui/hooks/use-toast';
+import { Send, Menu, GripVertical, ChevronUp, ChevronDown, MessageCircle } from 'lucide-react';
 import { useTextStream } from './streaming/useTextStream';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -21,19 +19,20 @@ export type RecipeMessage = {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  toolCallStatus?: 'starting' | 'running' | 'finished' 
+  recipeIds?: string[];
 };
 
 export function RecipeChatPage({ user }: { user: AuthUser }) {
   const [messages, setMessages] = useState<RecipeMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedRecipe, setSelectedRecipe] = useState<ElaboratedRecipe | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [displayRecipeIds, setDisplayRecipeIds] = useState<string[]>([]);
   const [chatHeight, setChatHeight] = useState(33); // Percentage of total height for chat section
   const [isDragging, setIsDragging] = useState(false);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
-  const { toast } = useToast();
 
   // Use Wasp's useQuery to fetch user recipes, filtered by displayRecipeIds when available
   const { data: recipes = [], isLoading: isRecipesLoading, refetch: refetchRecipes } = useQuery(getUserRecipes, {
@@ -53,6 +52,9 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
         }
         return [...prevMessages, { id: response.id, role: 'assistant', content: response.content }];
       });
+    }
+    if (response.recipeIds) {
+      setDisplayRecipeIds(response.recipeIds);
     }
   }, [response]);
 
@@ -85,13 +87,13 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
     }
   }, [recipes]);
 
-  const handleRecipeClick = useCallback((recipe: ElaboratedRecipe) => {
+  const handleRecipeClick = useCallback((recipe: Recipe) => {
     setSelectedRecipe(recipe);
     setIsMobileSidebarOpen(false);
   }, []);
 
   const handleRecipeUpdated = useCallback(
-    async (updatedRecipe: ElaboratedRecipe) => {
+    async (updatedRecipe: Recipe) => {
       if (selectedRecipe?.id === updatedRecipe.id) {
         setSelectedRecipe(updatedRecipe);
       }
