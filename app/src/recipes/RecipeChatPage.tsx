@@ -1,5 +1,6 @@
 import type { AuthUser } from 'wasp/auth';
 import type { Recipe } from 'wasp/entities';
+import type { FinishReason } from './streaming/useTextStream';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { getUserRecipes, useQuery } from 'wasp/client/operations';
@@ -21,6 +22,7 @@ export type RecipeMessage = {
   content: string;
   toolCallStatus?: 'starting' | 'running' | 'finished' 
   recipeIds?: string[];
+  finishReason?: FinishReason;
 };
 
 export function RecipeChatPage({ user }: { user: AuthUser }) {
@@ -41,7 +43,7 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
     recipeIds: displayRecipeIds,
   });
 
-  const { response, sendMessage, finishReason } = useTextStream({ path: '/api/recipes/stream-chat', metadata: { threadId: 'recipe-session-1' }, setIsLoading });
+  const { response, sendMessage } = useTextStream({ path: '/api/recipes/stream-chat', metadata: { threadId: 'recipe-session-1' }, setIsLoading });
 
   useEffect(() => {
     if (response.content.trim().length > 0) {
@@ -53,16 +55,11 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
         return [...prevMessages, { id: response.id, role: 'assistant', content: response.content }];
       });
     }
-    if (response.recipeIds) {
-      setDisplayRecipeIds(response.recipeIds);
-    }
-  }, [response]);
-
-  useEffect(() => {
-    if (finishReason === 'stop') {
+    if (response.finishReason === 'stop') {
+      setDisplayRecipeIds(response.recipeIds || []);
       refetchRecipes();
     }
-  }, [finishReason]);
+  }, [response]);
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -159,24 +156,6 @@ export function RecipeChatPage({ user }: { user: AuthUser }) {
     setIsLoading(true);
 
     sendMessage({ message: userMessage });
-
-    // if (response.displayRecipeIds.length > 0) {
-    //   setDisplayRecipeIds(response.displayRecipeIds);
-    // }
-
-    // if (response.toolIdsCalled.length > 0) {
-    //   toast({
-    //     title: 'Tools Called',
-    //     description: 'The following tools were called: ' + response.toolIdsCalled.join(', '),
-    //   });
-    // }
-
-    // if (response.numRecipesCreated > 0) {
-    //   toast({
-    //     title: 'Recipes Created',
-    //     description: `${response.numRecipesCreated} recipes were created and added to your collection.`,
-    //   });
-    // }
 
     setTimeout(() => {
       inputRef.current?.focus();

@@ -8,21 +8,19 @@ import { v4 as uuidv4 } from 'uuid';
 import { printWorkflowStepStatus, WorkflowId, WorkflowStepId } from '../../mastra/workflow/ids';
 import { ToolId } from '../../mastra/tools/ids';
 
-type FinishReason = 'stop' | 'error' | null;
+export type FinishReason = 'stop' | 'error' | null;
 
 export function useTextStream({ path, metadata, setIsLoading }: { path: string; metadata: Record<string, string>; setIsLoading: Dispatch<SetStateAction<boolean>> }) {
   const [message, setMessage] = useState<string>('');
-  const [response, setResponse] = useState<RecipeMessage>({ id: uuidv4(), role: 'assistant', content: '', toolCallStatus: undefined, recipeIds: undefined });
-  const [finishReason, setFinishReason] = useState<FinishReason>(null);
+  const [response, setResponse] = useState<RecipeMessage>({ id: uuidv4(), role: 'assistant', content: '', toolCallStatus: undefined, recipeIds: undefined, finishReason: undefined });
 
   function sendMessage({ message }: { message: string }) {
     // Reset response message with new UUID when starting a new message
-    setFinishReason(null);
-    setResponse({ id: uuidv4(), role: 'assistant', content: '', toolCallStatus: undefined, recipeIds: undefined });
+    setResponse({ id: uuidv4(), role: 'assistant', content: '', toolCallStatus: undefined, recipeIds: undefined, finishReason: undefined });
     setMessage(message);
   }
 
-  const parseJsonChunkAndSetResponse = (chunk: string, setFinishReason: Dispatch<SetStateAction<FinishReason>>) => {
+  const parseJsonChunkAndSetResponse = (chunk: string) => {
     console.log('chunk: ', chunk);
     const jsonStrings = splitJsonStringsInChunk(chunk);
     jsonStrings.forEach((jsonStr) => {
@@ -37,7 +35,7 @@ export function useTextStream({ path, metadata, setIsLoading }: { path: string; 
             handleToolOutput(chunk, setResponse);
             break;
           case 'tool-result':
-            handleToolResult(chunk, setResponse, setFinishReason);
+            handleToolResult(chunk, setResponse);
             break;
           case 'text-delta':
             handleTextDelta(chunk, setResponse);
@@ -59,10 +57,10 @@ export function useTextStream({ path, metadata, setIsLoading }: { path: string; 
       input: message,
       metadata,
       onData: (chunk) => {
-        parseJsonChunkAndSetResponse(chunk, setFinishReason);
+        parseJsonChunkAndSetResponse(chunk);
       },
       setIsLoading,
-      setFinishReason,
+      setResponse,
       controller,
     });
 
@@ -74,7 +72,6 @@ export function useTextStream({ path, metadata, setIsLoading }: { path: string; 
   return {
     response,
     sendMessage,
-    finishReason,
   };
 }
 
@@ -84,11 +81,11 @@ type FetchStreamProps = {
   metadata: Record<string, string>;
   onData: (data: string) => void;
   setIsLoading: Dispatch<SetStateAction<boolean>>;
-  setFinishReason: Dispatch<SetStateAction<'stop' | 'error' | null>>;
+  setResponse: Dispatch<SetStateAction<RecipeMessage>>;
   controller: AbortController;
 };
 
-async function fetchStream({ path, input, metadata, onData, setIsLoading, setFinishReason, controller }: FetchStreamProps) {
+async function fetchStream({ path, input, metadata, onData, setIsLoading, setResponse, controller }: FetchStreamProps) {
   setIsLoading(true);
   const sessionId = getSessionId();
   const body = {
@@ -108,7 +105,7 @@ async function fetchStream({ path, input, metadata, onData, setIsLoading, setFin
 
   if (response.body === null) {
     onData('I apologize, but I encountered an error processing your request. Please try again.');
-    setFinishReason('error');
+    setResponse((prev) => ({ ...prev, finishReason: 'error' }));
     throw new Error('Stream body is null');
   }
 
@@ -117,7 +114,7 @@ async function fetchStream({ path, input, metadata, onData, setIsLoading, setFin
     const { done, value } = await reader.read();
     if (done) {
       console.log('<><><> text stream finished <><><>');
-      setFinishReason('stop');
+      setResponse((prev) => ({ ...prev, finishReason: 'stop' }));
       return;
     }
     onData(value.toString());
@@ -148,9 +145,8 @@ function handleToolOutput(chunk: ToolOutputChunk, setResponse: Dispatch<SetState
   }
 }
 
-function handleToolResult(chunk: ToolResultChunk, setResponse: Dispatch<SetStateAction<RecipeMessage>>, setFinishReason: Dispatch<SetStateAction<'stop' | 'error' | null>>) {
+function handleToolResult(chunk: ToolResultChunk, setResponse: Dispatch<SetStateAction<RecipeMessage>>) {
   if (chunk.workflowId === WorkflowId.GenerateCompleteRecipes) {
-    setFinishReason('stop'); // Refetch recipes when the workflow is finished
     setResponse((prev) => ({ ...prev, toolCallStatus: 'finished', content: '🍕 Your recipes are ready! ' }));
   } else if (chunk.toolId === ToolId.GetUserRecipes) {
     setResponse((prev) => ({ ...prev, toolCallStatus: 'finished', content: `🍕 ${chunk.recipeIds?.length} recipes were found.`, recipeIds: chunk.recipeIds }));
