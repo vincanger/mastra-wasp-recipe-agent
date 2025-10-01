@@ -17,6 +17,7 @@ export function useTextStream({ path, metadata, setIsLoading }: { path: string; 
 
   function sendMessage({ message }: { message: string }) {
     // Reset response message with new UUID when starting a new message
+    setFinishReason(null);
     setResponse({ id: uuidv4(), role: 'assistant', content: '', toolCallStatus: undefined, recipeIds: undefined });
     setMessage(message);
   }
