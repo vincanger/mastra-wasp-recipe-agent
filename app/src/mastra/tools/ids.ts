@@ -1,5 +1,4 @@
 export enum ToolId {
-  RunGenerateCompleteRecipes = 'runGenerateCompleteRecipes',
   GetUserRecipes = 'getUserRecipes',
   GenerateRecipeThumbnail = 'generateRecipeThumbnail',
 }

@@ -1,12 +1,11 @@
 import type { RecipeMessage } from '../RecipeChatPage';
-import type { TextStreamChunk, ToolCallStartChunk, ToolResultChunk, TextDeltaChunk, ToolOutputChunk } from './chunkTypes';
+import type { TextStreamChunk, ToolChunk, TextDeltaChunk } from './chunkTypes';
 
 import { SetStateAction, Dispatch, useEffect, useState } from 'react';
 import { config } from 'wasp/client';
 import { getSessionId } from 'wasp/client/api';
 import { v4 as uuidv4 } from 'uuid';
-import { printWorkflowStepStatus, WorkflowId, WorkflowStepId } from '../../mastra/workflow/ids';
-import { ToolId } from '../../mastra/tools/ids';
+import { assertUnreachable } from '../../shared/utils';
 
 export type FinishReason = 'stop' | 'error' | null;
 
@@ -21,7 +20,6 @@ export function useTextStream({ path, metadata, setIsLoading }: { path: string; 
   }
 
   const parseJsonChunkAndSetResponse = (chunk: string) => {
-    console.log('chunk: ', chunk);
     const jsonStrings = splitJsonStringsInChunk(chunk);
     jsonStrings.forEach((jsonStr) => {
       try {
@@ -29,17 +27,15 @@ export function useTextStream({ path, metadata, setIsLoading }: { path: string; 
         const chunkType = chunk.type;
         switch (chunkType) {
           case 'tool-call-input-streaming-start':
-            handleToolCallStart(chunk, setResponse);
-            break;
           case 'tool-output':
-            handleToolOutput(chunk, setResponse);
-            break;
           case 'tool-result':
-            handleToolResult(chunk, setResponse);
+            handleToolStreamChunk(chunk, setResponse);
             break;
           case 'text-delta':
             handleTextDelta(chunk, setResponse);
             break;
+          default:
+            assertUnreachable(chunkType);
         }
       } catch (e) {
         console.error('Failed to parse JSON:', jsonStr);
@@ -73,6 +69,23 @@ export function useTextStream({ path, metadata, setIsLoading }: { path: string; 
     response,
     sendMessage,
   };
+}
+
+function splitJsonStringsInChunk(chunk: string) {
+  return chunk.split('}{').map((str, index, array) => {
+    if (index === 0 && array.length > 1) return str + '}';
+    if (index === array.length - 1 && array.length > 1) return '{' + str;
+    if (array.length > 1) return '{' + str + '}';
+    return str;
+  });
+}
+
+function handleToolStreamChunk(chunk: ToolChunk, setResponse: Dispatch<SetStateAction<RecipeMessage>>) {
+  setResponse((prev) => ({ ...prev, toolCallStatus: chunk.toolCallStatus, content: chunk.content, recipeIds: chunk.recipeIds }));
+}
+
+function handleTextDelta(chunk: TextDeltaChunk, setResponse: Dispatch<SetStateAction<RecipeMessage>>) {
+  setResponse((prev) => ({ ...prev, content: prev.content + chunk.content }));
 }
 
 type FetchStreamProps = {
@@ -119,41 +132,4 @@ async function fetchStream({ path, input, metadata, onData, setIsLoading, setRes
     }
     onData(value.toString());
   }
-}
-
-function splitJsonStringsInChunk(chunk: string) {
-  return chunk.split('}{').map((str, index, array) => {
-    if (index === 0 && array.length > 1) return str + '}';
-    if (index === array.length - 1 && array.length > 1) return '{' + str;
-    if (array.length > 1) return '{' + str + '}';
-    return str;
-  });
-}
-
-function handleToolCallStart(chunk: ToolCallStartChunk, setResponse: Dispatch<SetStateAction<RecipeMessage>>) {
-  if (chunk.workflowId === WorkflowId.GenerateCompleteRecipes) {
-    setResponse((prev) => ({ ...prev, toolCallStatus: 'starting', content: '⏳ Starting recipe generation... ' }));
-  } else if (chunk.toolId === ToolId.GetUserRecipes) {
-    setResponse((prev) => ({ ...prev, toolCallStatus: 'starting', content: '⏳ Starting recipe search... ' }));
-  }
-}
-
-function handleToolOutput(chunk: ToolOutputChunk, setResponse: Dispatch<SetStateAction<RecipeMessage>>) {
-  // Handle the workflow steps only, and pretty print messages for the user to keep them updated/engaged.
-  if (Object.values(WorkflowStepId).includes(chunk.workflowStepId)) {
-    let stepMessage = printWorkflowStepStatus(chunk.workflowStepId);
-    setResponse((prev) => ({ ...prev, toolCallStatus: 'running', content: stepMessage }));
-  }
-}
-
-function handleToolResult(chunk: ToolResultChunk, setResponse: Dispatch<SetStateAction<RecipeMessage>>) {
-  if (chunk.workflowId === WorkflowId.GenerateCompleteRecipes) {
-    setResponse((prev) => ({ ...prev, toolCallStatus: 'finished', content: '🍕 Your recipes are ready! ' }));
-  } else if (chunk.toolId === ToolId.GetUserRecipes) {
-    setResponse((prev) => ({ ...prev, toolCallStatus: 'finished', content: `🍕 ${chunk.recipeIds?.length} recipes were found.`, recipeIds: chunk.recipeIds }));
-  }
-}
-
-function handleTextDelta(chunk: TextDeltaChunk, setResponse: Dispatch<SetStateAction<RecipeMessage>>) {
-  setResponse((prev) => ({ ...prev, content: prev.content + chunk.text }));
 }

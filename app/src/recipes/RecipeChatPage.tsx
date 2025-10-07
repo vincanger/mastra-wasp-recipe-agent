@@ -1,6 +1,7 @@
 import type { AuthUser } from 'wasp/auth';
 import type { Recipe } from 'wasp/entities';
 import type { FinishReason } from './streaming/useTextStream';
+import type { ToolCallStatus } from './streaming/chunkTypes';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { getUserRecipes, useQuery } from 'wasp/client/operations';
@@ -20,7 +21,7 @@ export type RecipeMessage = {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
-  toolCallStatus?: 'starting' | 'running' | 'finished' 
+  toolCallStatus?: ToolCallStatus;
   recipeIds?: string[];
   finishReason?: FinishReason;
 };

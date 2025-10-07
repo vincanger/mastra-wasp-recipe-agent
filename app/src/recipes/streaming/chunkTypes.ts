@@ -1,38 +1,30 @@
 import type { ChunkType } from "@mastra/core";
-import { z } from "zod";
 
+import { z } from "zod";
 import { WorkflowId, WorkflowStepId } from "../../mastra/workflow/ids";
 import { ToolId } from "../../mastra/tools/ids";
+
+export type ToolCallStatus = 'starting' | 'running' | 'finished';
 
 interface BaseChunk {
   type: ChunkType['type'];
 }
 
 // === Outgoing chunk interfaces (sent to client) ===
-export interface ToolOutputChunk extends BaseChunk {
-  type: 'tool-output';
-  workflowStepId: WorkflowStepId;
-}
-
-export interface ToolCallStartChunk extends BaseChunk {
-  type: 'tool-call-input-streaming-start';
-  workflowId?: WorkflowId;
-  toolId?: ToolId;
-}
-
-export interface ToolResultChunk extends BaseChunk {
-  type: 'tool-result';
-  workflowId?: WorkflowId;
-  toolId?: ToolId;
+export interface ToolChunk extends BaseChunk {
+  type: 'tool-call-input-streaming-start' | 'tool-output' | 'tool-result';
+  toolId: ToolId | WorkflowId | WorkflowStepId;
+  toolCallStatus: ToolCallStatus;
+  content: string;
   recipeIds?: string[];
 }
 
 export interface TextDeltaChunk extends BaseChunk {
   type: 'text-delta';
-  text: string;
+  content: string;
 }
 
-export type TextStreamChunk = ToolOutputChunk | ToolCallStartChunk | ToolResultChunk | TextDeltaChunk;
+export type TextStreamChunk = ToolChunk | TextDeltaChunk;
 
 // === Zod schemas for validating INCOMING Mastra chunks ===
 // These validate the nested payload structures that are typed as 'any' in Mastra
@@ -43,7 +35,7 @@ export const mastraToolOutputChunkSchema = z.object({
     output: z.object({
       type: z.string(),
       payload: z.object({
-        id: z.nativeEnum(WorkflowStepId), // This is the only workflow we've created so far, so we can hardcode the type.
+        id: z.nativeEnum(WorkflowStepId).optional(),
       }).passthrough(),
     }).passthrough(),
   }).passthrough(),
