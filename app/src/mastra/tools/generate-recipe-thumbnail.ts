@@ -26,7 +26,6 @@ const outputSchema = z.object({
 
 export type GenerateRecipeThumbnailOutput = z.infer<typeof outputSchema>;
 
-// Export a simple function for internal use if its not being called from an agent
 export async function generateThumbnailForRecipe(recipe: ElaboratedRecipe, userId: string) {
   try {
     const output_format: ImageGenerateParams['output_format'] = 'webp';
@@ -43,7 +42,7 @@ export async function generateThumbnailForRecipe(recipe: ElaboratedRecipe, userI
       return {
         thumbnailUrl: '',
         success: false,
-        error: 'Failed to generate image from DALL-E',
+        error: 'Failed to generate image from GPT',
       };
     }
 

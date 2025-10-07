@@ -1,5 +1,5 @@
 import type { RecipeMessage } from '../RecipeChatPage';
-import type { TextStreamChunk, ToolCallStartChunk, ToolResultChunk, TextDeltaChunk, ToolOutputChunk } from './api';
+import type { TextStreamChunk, ToolCallStartChunk, ToolResultChunk, TextDeltaChunk, ToolOutputChunk } from './chunkTypes';
 
 import { SetStateAction, Dispatch, useEffect, useState } from 'react';
 import { config } from 'wasp/client';
@@ -139,6 +139,7 @@ function handleToolCallStart(chunk: ToolCallStartChunk, setResponse: Dispatch<Se
 }
 
 function handleToolOutput(chunk: ToolOutputChunk, setResponse: Dispatch<SetStateAction<RecipeMessage>>) {
+  // Handle the workflow steps only, and pretty print messages for the user to keep them updated/engaged.
   if (Object.values(WorkflowStepId).includes(chunk.workflowStepId)) {
     let stepMessage = printWorkflowStepStatus(chunk.workflowStepId);
     setResponse((prev) => ({ ...prev, toolCallStatus: 'running', content: stepMessage }));

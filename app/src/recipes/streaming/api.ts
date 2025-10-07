@@ -1,39 +1,32 @@
 import type { StreamChatWithRecipeAgent } from 'wasp/server/api';
 import type { MiddlewareConfigFn } from 'wasp/server';
+import type { ChunkType } from '@mastra/core';
+import type { TextStreamChunk, ToolOutputChunk, ToolCallStartChunk, ToolResultChunk } from './chunkTypes';
+import type { Response } from 'express';
 
+import { z } from 'zod';
 import { HttpError } from 'wasp/server';
 import { AgentId } from '../../mastra/agents/ids';
 import { mastra } from '../../mastra';
 import { setUserIdForToolUse, ToolId } from '../../mastra/tools/ids';
-import { WorkflowId, WorkflowStepId } from '../../mastra/workflow/ids';
+import { WorkflowId } from '../../mastra/workflow/ids';
+import { mastraToolOutputChunkSchema, mastraToolResultChunkSchema } from './chunkTypes';
 
-export type ToolOutputChunk = {
-  type: 'tool-output';
-  workflowStepId: WorkflowStepId;
-};
+const streamChatRequestBodySchema = z.object({
+  messages: z.array(
+    z.object({
+      parts: z.array(
+        z.object({
+          text: z.string(),
+        })
+      ),
+      metadata: z.object({
+        threadId: z.string(),
+      }),
+    })
+  ),
+});
 
-export type ToolCallStartChunk = {
-  type: 'tool-call-input-streaming-start';
-  workflowId?: WorkflowId;
-  toolId?: ToolId;
-};
-
-export type ToolResultChunk = {
-  type: 'tool-result';
-  workflowId?: WorkflowId;
-  toolId?: ToolId;
-  recipeIds?: string[];
-};
-
-export type TextDeltaChunk = {
-  type: 'text-delta';
-  text: string;
-};
-
-// Union type that TypeScript can discriminate
-export type TextStreamChunk = ToolOutputChunk | ToolCallStartChunk | ToolResultChunk | TextDeltaChunk;
-
-// Custom API endpoint that returns a streaming text.
 export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, res, context) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Transfer-Encoding', 'chunked');
@@ -41,7 +34,12 @@ export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, 
     throw new HttpError(401, 'Not authorized');
   }
 
-  const { messages } = req.body;
+  const { success, data, error } = streamChatRequestBodySchema.safeParse(req.body);
+  if (!success) {
+    throw new HttpError(400, 'Invalid request body', { errors: error.errors });
+  }
+
+  const { messages } = data;
   for (const message of messages) {
     console.log('message: ', message);
     const { parts, metadata } = message;
@@ -58,73 +56,33 @@ export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, 
     });
 
     for await (const chunk of streamResult.fullStream) {
-      if (chunk.type === 'tool-output') {
-        // {
-        // type: 'workflow-step-start',
-        //    runId: '7471b3c0-ea73-4eb1-bbc2-4a2d1405f39b',
-        //    from: 'WORKFLOW',
-        //    payload: {
-        //     stepName: 'generateElaboratedRecipesStep',
-        //     id: 'generateElaboratedRecipesStep',
-        //     stepCallId: '2d0e62a4-2c73-4266-972e-e30177254c71',
-        //     payload: { titles: [Array] },
-        //     startedAt: 1759130424815,
-        //     status: 'running'
-        //   }
-        // }
-        if (chunk.payload.output.type === 'workflow-step-start') {
-          const textStreamChunk: TextStreamChunk = {
-            type: chunk.type,
-            workflowStepId: chunk.payload.output.payload.id,
-          };
-          res.write(JSON.stringify(textStreamChunk));
+      try {
+        switch (chunk.type) {
+          case 'text-delta':
+            handleTextDeltaChunk(chunk, res);
+            break;
+
+          case 'tool-call-input-streaming-start':
+            handleToolCallStartChunk(chunk, res);
+            break;
+
+          case 'tool-output':
+            handleToolOutputChunk(chunk, res);
+            break;
+
+          case 'tool-result':
+            if (handleToolResultChunk(chunk, res)) {
+              return; // Stream ended
+            }
+            break;
+
+          default:
+            console.log('Unhandled chunk type:', chunk.type);
+            break;
         }
-      }
-      if (chunk.type === 'tool-call-input-streaming-start') {
-        if (chunk.payload.toolName === WorkflowId.GenerateCompleteRecipes) {
-          const textStreamChunk: TextStreamChunk = {
-            type: chunk.type,
-            workflowId: chunk.payload.toolName,
-          };
-          res.write(JSON.stringify(textStreamChunk));
-        } else if (chunk.payload.toolName === ToolId.GetUserRecipes) {
-          const textStreamChunk: TextStreamChunk = {
-            type: chunk.type,
-            toolId: chunk.payload.toolName,
-          };
-          res.write(JSON.stringify(textStreamChunk));
-        }
-      }
-      if (chunk.type === 'tool-result') {
-        if (chunk.payload.toolName === WorkflowId.GenerateCompleteRecipes) {
-          const textStreamChunk: TextStreamChunk = {
-            type: chunk.type,
-            workflowId: chunk.payload.toolName,
-          };
-          res.write(JSON.stringify(textStreamChunk));
-          // Our workflow result sends an array of completed recipes,
-          // which we save to the db, so we can end the stream
-          // and display the recipes in the detailed recipe view
-          // so we dont also stream the entire recipe text.
-          res.end();
-          return;
-        } else if (chunk.payload.toolName === ToolId.GetUserRecipes) {
-          const textStreamChunk: TextStreamChunk = {
-            type: chunk.type,
-            toolId: chunk.payload.toolName,
-            recipeIds: chunk.payload.result.recipeIds,
-          };
-          res.write(JSON.stringify(textStreamChunk));
-          res.end();
-          return;
-        }
-      }
-      if (chunk.type === 'text-delta') {
-        const textStreamChunk: TextStreamChunk = {
-          type: chunk.type,
-          text: chunk.payload.text,
-        };
-        res.write(JSON.stringify(textStreamChunk));
+      } catch (error) {
+        console.error('Error processing chunk:', error);
+        // Continue processing other chunks instead of crashing
       }
     }
   }
@@ -132,7 +90,75 @@ export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, 
   res.end();
 };
 
-// Returning the default config.
+function handleTextDeltaChunk(chunk: Extract<ChunkType, { type: 'text-delta' }>, res: Response) {
+  const textDeltaChunk: TextStreamChunk = {
+    type: chunk.type,
+    text: chunk.payload.text,
+  };
+  res.write(JSON.stringify(textDeltaChunk));
+}
+
+function handleToolOutputChunk(chunk: Extract<ChunkType, { type: 'tool-output' }>, res: Response) {
+  const validated = mastraToolOutputChunkSchema.parse(chunk);
+
+  if (validated.payload.output.type === 'workflow-step-start') {
+    const toolOutputChunk: ToolOutputChunk = {
+      type: chunk.type,
+      workflowStepId: validated.payload.output.payload.id,
+    };
+    res.write(JSON.stringify(toolOutputChunk));
+  }
+}
+
+function handleToolCallStartChunk(chunk: Extract<ChunkType, { type: 'tool-call-input-streaming-start' }>, res: Response) {
+  // We only want to handle certain tool calls, in this case:
+  if (chunk.payload.toolName === WorkflowId.GenerateCompleteRecipes) {
+    const toolCallStartChunk: ToolCallStartChunk = {
+      type: chunk.type,
+      workflowId: chunk.payload.toolName,
+    };
+    res.write(JSON.stringify(toolCallStartChunk));
+  } else if (chunk.payload.toolName === ToolId.GetUserRecipes) {
+    const toolCallStartChunk: ToolCallStartChunk = {
+      type: chunk.type,
+      toolId: chunk.payload.toolName,
+    };
+    res.write(JSON.stringify(toolCallStartChunk));
+  }
+}
+
+function handleToolResultChunk(chunk: Extract<ChunkType, { type: 'tool-result' }>, res: Response) {
+  const { success, data, error } = mastraToolResultChunkSchema.safeParse(chunk);
+  if (!success) {
+    console.error('Invalid tool result chunk:', error);
+    throw new HttpError(400, 'Invalid tool result chunk', { errors: error.errors });
+  }
+
+  if (data.payload.toolName === WorkflowId.GenerateCompleteRecipes) {
+    const toolResultChunk: ToolResultChunk = {
+      type: chunk.type,
+      workflowId: data.payload.toolName,
+    };
+    res.write(JSON.stringify(toolResultChunk));
+    // Our workflow result saves an array of completed recipes,
+    // to the db, so we can end the stream and display the recipes
+    // in the detailed recipe view without also streaming the entire recipe text.
+    res.end();
+    return true;
+  } else if (data.payload.toolName === ToolId.GetUserRecipes) {
+    const toolResultChunk: ToolResultChunk = {
+      type: chunk.type,
+      toolId: data.payload.toolName,
+      recipeIds: data.payload.result?.recipeIds,
+    };
+    res.write(JSON.stringify(toolResultChunk));
+    res.end();
+    return true;
+  }
+  return false;
+}
+
+// Returning the default config is necessary for our custom API.
 export const getMiddlewareConfig: MiddlewareConfigFn = (config) => {
   return config;
 };

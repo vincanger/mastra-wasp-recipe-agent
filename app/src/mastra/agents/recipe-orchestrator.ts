@@ -28,7 +28,7 @@ export const recipeOrchestrator = new Agent({
     
     When the user asks about their existing recipes, use the 'getUserRecipes' tool to search their collection. 
     The user ID is automatically provided - you don't need to specify it.
-    When the user asks for full/detailed instructions for new recipe ideas, call the 'runGenerateFullRecipesWorkflow' tool with an array of titles.
+    When the user asks for full/detailed instructions for new recipe ideas, call the 'generateCompleteRecipes' tool with an array of titles.
     
     Always be helpful and provide cooking tips, substitutions, and meal planning advice.
     DO NOT return full recipes, only provide recipe ideas and summaries of instructions.
