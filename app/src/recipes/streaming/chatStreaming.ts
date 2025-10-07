@@ -4,13 +4,32 @@ import { z } from "zod";
 import { WorkflowId, WorkflowStepId } from "../../mastra/workflow/ids";
 import { ToolId } from "../../mastra/tools/ids";
 
+// === Incoming API request body schema ===
+export const streamChatRequestBodySchema = z.object({
+  messages: z.array(
+    z.object({
+      parts: z.array(
+        z.object({
+          text: z.string(),
+        })
+      ),
+      metadata: z.object({
+        threadId: z.string(),
+      }),
+    })
+  ),
+});
+export type StreamChatRequestBody = z.infer<typeof streamChatRequestBodySchema>;
+export type StreamChatMessage = StreamChatRequestBody['messages'][number];
+export type StreamChatMetadata = StreamChatMessage['metadata'];
+
+// === Outgoing chunk interfaces (sent to client) ===
 export type ToolCallStatus = 'starting' | 'running' | 'finished';
 
 interface BaseChunk {
   type: ChunkType['type'];
 }
 
-// === Outgoing chunk interfaces (sent to client) ===
 export interface ToolChunk extends BaseChunk {
   type: 'tool-call-input-streaming-start' | 'tool-output' | 'tool-result';
   toolId: ToolId | WorkflowId | WorkflowStepId;

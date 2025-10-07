@@ -1,7 +1,7 @@
 import type { AuthUser } from 'wasp/auth';
 import type { Recipe } from 'wasp/entities';
 import type { FinishReason } from './streaming/useTextStream';
-import type { ToolCallStatus } from './streaming/chunkTypes';
+import type { ToolCallStatus } from './streaming/chatStreaming';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { getUserRecipes, useQuery } from 'wasp/client/operations';

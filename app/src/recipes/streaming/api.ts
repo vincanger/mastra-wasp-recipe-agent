@@ -1,31 +1,15 @@
 import type { StreamChatWithRecipeAgent } from 'wasp/server/api';
 import type { MiddlewareConfigFn } from 'wasp/server';
 import type { ChunkType } from '@mastra/core';
-import type { TextStreamChunk, ToolChunk } from './chunkTypes';
+import type { TextStreamChunk, ToolChunk } from './chatStreaming';
 import type { Response } from 'express';
 
-import { z } from 'zod';
 import { HttpError } from 'wasp/server';
 import { AgentId } from '../../mastra/agents/ids';
 import { mastra } from '../../mastra';
 import { setUserIdForToolUse, ToolId } from '../../mastra/tools/ids';
 import { printWorkflowStepStatus, WorkflowId, WorkflowStepId } from '../../mastra/workflow/ids';
-import { mastraToolOutputChunkSchema, mastraToolResultChunkSchema } from './chunkTypes';
-
-const streamChatRequestBodySchema = z.object({
-  messages: z.array(
-    z.object({
-      parts: z.array(
-        z.object({
-          text: z.string(),
-        })
-      ),
-      metadata: z.object({
-        threadId: z.string(),
-      }),
-    })
-  ),
-});
+import { mastraToolOutputChunkSchema, mastraToolResultChunkSchema, streamChatRequestBodySchema } from './chatStreaming';
 
 export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, res, context) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');

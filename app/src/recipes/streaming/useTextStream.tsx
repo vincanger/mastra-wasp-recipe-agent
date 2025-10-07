@@ -1,5 +1,5 @@
 import type { RecipeMessage } from '../RecipeChatPage';
-import type { TextStreamChunk, ToolChunk, TextDeltaChunk } from './chunkTypes';
+import type { TextStreamChunk, ToolChunk, TextDeltaChunk, StreamChatRequestBody, StreamChatMetadata } from './chatStreaming';
 
 import { SetStateAction, Dispatch, useEffect, useState } from 'react';
 import { config } from 'wasp/client';
@@ -9,7 +9,7 @@ import { assertUnreachable } from '../../shared/utils';
 
 export type FinishReason = 'stop' | 'error' | null;
 
-export function useTextStream({ path, metadata, setIsLoading }: { path: string; metadata: Record<string, string>; setIsLoading: Dispatch<SetStateAction<boolean>> }) {
+export function useTextStream({ path, metadata, setIsLoading }: { path: string; metadata: StreamChatMetadata; setIsLoading: Dispatch<SetStateAction<boolean>> }) {
   const [message, setMessage] = useState<string>('');
   const [response, setResponse] = useState<RecipeMessage>({ id: uuidv4(), role: 'assistant', content: '', toolCallStatus: undefined, recipeIds: undefined, finishReason: undefined });
 
@@ -32,7 +32,7 @@ export function useTextStream({ path, metadata, setIsLoading }: { path: string; 
             handleToolStreamChunk(chunk, setResponse);
             break;
           case 'text-delta':
-            handleTextDelta(chunk, setResponse);
+            handleTextDeltaChunk(chunk, setResponse);
             break;
           default:
             assertUnreachable(chunkType);
@@ -84,14 +84,14 @@ function handleToolStreamChunk(chunk: ToolChunk, setResponse: Dispatch<SetStateA
   setResponse((prev) => ({ ...prev, toolCallStatus: chunk.toolCallStatus, content: chunk.content, recipeIds: chunk.recipeIds }));
 }
 
-function handleTextDelta(chunk: TextDeltaChunk, setResponse: Dispatch<SetStateAction<RecipeMessage>>) {
+function handleTextDeltaChunk(chunk: TextDeltaChunk, setResponse: Dispatch<SetStateAction<RecipeMessage>>) {
   setResponse((prev) => ({ ...prev, content: prev.content + chunk.content }));
 }
 
 type FetchStreamProps = {
   path: string;
   input: string;
-  metadata: Record<string, string>;
+  metadata: StreamChatMetadata;
   onData: (data: string) => void;
   setIsLoading: Dispatch<SetStateAction<boolean>>;
   setResponse: Dispatch<SetStateAction<RecipeMessage>>;
@@ -101,7 +101,7 @@ type FetchStreamProps = {
 async function fetchStream({ path, input, metadata, onData, setIsLoading, setResponse, controller }: FetchStreamProps) {
   setIsLoading(true);
   const sessionId = getSessionId();
-  const body = {
+  const body: StreamChatRequestBody = {
     messages: [{ parts: [{ text: input }], metadata }],
   };
 
