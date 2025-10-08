@@ -17,6 +17,7 @@ export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, 
   if (!context.user) {
     throw new HttpError(401, 'Not authorized');
   }
+  setUserIdForToolUse(context.user.id);
 
   const { success, data, error } = streamChatRequestBodySchema.safeParse(req.body);
   if (!success) {
@@ -25,13 +26,11 @@ export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, 
 
   const { messages } = data;
   for (const message of messages) {
-    console.log('message: ', message);
     const { parts, metadata } = message;
     const { threadId } = metadata;
-    setUserIdForToolUse(context.user.id);
+    const messageText = parts.map((part: { text: string }) => part.text).join('');
 
     const recipeOrchestrator = mastra.getAgent(AgentId.RecipeOrchestrator);
-    const messageText = parts.map((part: { text: string }) => part.text).join('');
     const streamResult = await recipeOrchestrator.streamVNext(messageText, {
       memory: {
         resource: context.user.id, // user id
