@@ -1,6 +1,18 @@
 # <YOUR_RECIPE_AGENT_SAAS>
 
-Built with [Wasp](https://wasp.sh) and [Mastra AI](https://mastra.ai), based on the [Open Saas](https://opensaas.sh) template.
+<iframe width="560" height="315" src="https://www.youtube.com/embed/-mWmIaJ6AJk?si=dUPbnlV6ezvGhsOh" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+This open source recipe agent SaaS app for React & NodeJS comes complete with:
+- Auth
+- Fullstack typesafety
+- Stripe payments
+- Agent memory
+- AWS S3 file upload
+- & a ton more
+
+It was built on the [Open SaaS](https://opensaas.sh) template, which is a free, fullstack full-featured SaaS template powered by [Wasp](https://wasp.sh), and uses [Mastra AI](https://mastra.ai/) as the agent framework.
+
+
 
 ## Development
 

@@ -1,5 +1,8 @@
-const defaultTheme = require('tailwindcss/defaultTheme');
-const { resolveProjectPath } = require('wasp/dev');
+import TailwindTypography from "@tailwindcss/typography";
+import TailwindForms from "@tailwindcss/forms";
+import TailwindAnimate from "tailwindcss-animate";
+import DefaultTheme from "tailwindcss/defaultTheme";
+import { resolveProjectPath } from "wasp/dev";
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -78,7 +81,7 @@ module.exports = {
 				'2xsm': '375px',
 				xsm: '425px',
 				'3xl': '2000px',
-				...defaultTheme.screens
+				...DefaultTheme.screens
 			},
 			fontSize: {
 				'title-xxl': [
@@ -310,5 +313,5 @@ module.exports = {
 			}
 		}
 	},
-	plugins: [require('@tailwindcss/forms'), require('@tailwindcss/typography'), require("tailwindcss-animate")],
+	plugins: [TailwindForms, TailwindTypography, TailwindAnimate],
 };
