@@ -1,4 +1,5 @@
 import type { AuthUser } from 'wasp/auth';
+import type { UserRuntimeContext } from '../../recipes/streaming/api';
 
 import { createWorkflow, createStep } from '@mastra/core/workflows';
 import { z } from 'zod';
@@ -8,16 +9,15 @@ import { WorkflowId, WorkflowStepId } from './ids';
 import { AgentId } from '../agents/ids';
 import { elaboratedRecipeSchema, recipeDbModelSchema } from '../schemas/recipe-schema';
 import { saveRecipes } from 'wasp/server/operations';
-import { getCurrentUserId } from '../tools/ids';
 
+const generateCompleteRecipesInputSchema = z.object({
+  titles: z.array(z.string()).min(1),
+});
 const generateElaboratedRecipesOutputSchema = z.object({
   recipes: z.array(elaboratedRecipeSchema),
   userId: z.string(),
 });
 
-const generateCompleteRecipesInputSchema = z.object({
-  titles: z.array(z.string()).min(1),
-});
 export const generateCompleteRecipesOutputSchema = z.object({
   recipes: z.array(recipeDbModelSchema),
   userId: z.string(),
@@ -29,9 +29,11 @@ const generateElaboratedRecipesStep = createStep({
   id: WorkflowStepId.GenerateElaboratedRecipesStep,
   inputSchema: generateCompleteRecipesInputSchema,
   outputSchema: generateElaboratedRecipesOutputSchema,
-  execute: async ({ inputData, mastra }) => {
-    console.log(`generateElaboratedRecipesStep inputData: `, inputData);
-    const userId = getCurrentUserId();
+  execute: async ({ inputData, mastra, runtimeContext }) => {
+    const userId = runtimeContext.get('id') as UserRuntimeContext['id'];
+    if (!userId) {
+      throw new Error('userId is required for generateElaboratedRecipesStep. It must be provided in input or runContext.');
+    }
     const { iso: todaysDate } = getIsoAndHumanDate();
 
     const recipeElaborator = mastra.getAgent(AgentId.RecipeElaborator);

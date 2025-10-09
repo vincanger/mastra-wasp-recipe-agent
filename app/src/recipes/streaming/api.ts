@@ -1,3 +1,4 @@
+import type { AuthUser } from 'wasp/auth';
 import type { StreamChatWithRecipeAgent } from 'wasp/server/api';
 import type { MiddlewareConfigFn } from 'wasp/server';
 import type { ChunkType } from '@mastra/core';
@@ -7,9 +8,12 @@ import type { Response } from 'express';
 import { HttpError } from 'wasp/server';
 import { AgentId } from '../../mastra/agents/ids';
 import { mastra } from '../../mastra';
-import { setUserIdForToolUse, ToolId } from '../../mastra/tools/ids';
+import { ToolId } from '../../mastra/tools/ids';
+import { RuntimeContext } from '@mastra/core/runtime-context';
 import { printWorkflowStepStatus, WorkflowId, WorkflowStepId } from '../../mastra/workflow/ids';
 import { mastraToolOutputChunkSchema, mastraToolResultChunkSchema, streamChatRequestBodySchema } from './chatStreaming';
+
+export type UserRuntimeContext = Pick<AuthUser, 'id'>;
 
 export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, res, context) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -17,12 +21,14 @@ export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, 
   if (!context.user) {
     throw new HttpError(401, 'Not authorized');
   }
-  setUserIdForToolUse(context.user.id);
 
   const { success, data, error } = streamChatRequestBodySchema.safeParse(req.body);
   if (!success) {
     throw new HttpError(400, 'Invalid request body', { errors: error.errors });
   }
+
+  const runtimeContext = new RuntimeContext<UserRuntimeContext>();
+  runtimeContext.set('id', context.user.id);
 
   const { messages } = data;
   for (const message of messages) {
@@ -36,6 +42,8 @@ export const streamChatWithRecipeAgent: StreamChatWithRecipeAgent = async (req, 
         resource: context.user.id, // user id
         thread: threadId, // conversation id
       },
+      // Pass userId from Wasp context to Mastra's runtimeContext so tools and workflows can access it.
+      runtimeContext
     });
 
     for await (const chunk of streamResult.fullStream) {

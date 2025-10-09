@@ -1,11 +1,12 @@
 import type { Tool } from '@mastra/core/tools';
+import type { UserRuntimeContext } from '../../recipes/streaming/api';
 
 import { recipeDbModelSchema } from '../schemas/recipe-schema';
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { prisma } from 'wasp/server';
 import { Prisma } from '@prisma/client';
-import { getCurrentUserId, ToolId } from './ids';
+import { ToolId } from './ids';
 
 const inputSchema = z.object({
   favoritesOnly: z.boolean().optional().describe('If true, only return favorite recipes'),
@@ -37,9 +38,9 @@ export const getUserRecipes: Tool<typeof inputSchema, typeof outputSchema> = cre
     - "Find recipes that involve baking"`,
   inputSchema,
   outputSchema,
-  execute: async (executionContext) => {
-    const { favoritesOnly, searchQuery } = executionContext.context;
-    const userId = getCurrentUserId();
+  execute: async ({context, runtimeContext}) => {
+    const { favoritesOnly, searchQuery } = context;
+    const userId = runtimeContext.get('id') as UserRuntimeContext['id'];
     try {
       if (!userId) {
         throw new Error(`User ID is required for ${ToolId.GetUserRecipes} tool`);
