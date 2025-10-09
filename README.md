@@ -1,8 +1,32 @@
-# <YOUR_RECIPE_AGENT_>
+# <YOUR_RECIPE_AGENT_SAAS>
 
-This project is based on the [Open Saas](https://opensaas.sh) template and consists of three main dirs:
-1. `app` - Your SaaS app, built with [Wasp](https://wasp.sh) and [Mastra AI](https://mastra.ai).
-2. `e2e-tests` - [Playwright](https://playwright.dev/) tests for your Wasp web app.
-3. `blog` - Your blog / docs, built with [Astro](https://docs.astro.build) based on [Starlight](https://starlight.astro.build/) template.
+Built with [Wasp](https://wasp.sh) and [Mastra AI](https://mastra.ai), based on the [Open Saas](https://opensaas.sh) template.
 
-For more details, check READMEs of each respective directory!
+## Development
+
+### Running locally
+
+ - Make sure you have [Wasp](https://wasp.sh) installed:
+ ```bash
+ curl -sSL https://get.wasp.sh/installer.sh | sh
+ ```
+ - Copy the `.env.client` and `.env.server` files:
+```bash
+cp .env.server.example .env.server && cp .env.client.example .env.client
+```
+ - Run the database and leave it running (docker must be installed and running):
+ ```bash
+ wasp start db
+ ```
+ - Start the wasp app and leave it running:
+ ```bash
+ wasp start
+ ```
+ - If this is the first time starting the app, or you've just made changes to your entities/prisma schema, also run:
+ ```bash
+ wasp db migrate-dev
+ ```
+ - Fill in the needed env vars in the `.env.server` file:
+  - AWS S3 credentials
+  - OpenAI API key
+🤠 See the [Open SaaS docs](https://docs.opensaas.sh) for full instructions and integration guides!
